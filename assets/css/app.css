@@ -1,0 +1,135 @@
+
+@import "tailwindcss" source(none);
+@source "../css";
+@source "../js";
+@source "../../lib/ludo_web";
+@plugin "../vendor/heroicons";
+@plugin "../vendor/daisyui" {
+  themes: false;
+}
+
+/* Animación de entrada — la página emerge desde adentro, crece y pierde el blur */
+@keyframes page-emerge {
+  from { opacity: 0; transform: scale(0.88); filter: blur(8px); }
+  to   { opacity: 1; transform: scale(1);    filter: blur(0px); }
+}
+.page-emerge { animation: page-emerge 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* Animación de salida — lo contrario: se encoge */
+@keyframes page-retreat {
+  from { opacity: 1; transform: scale(1);    filter: blur(0px); }
+  to   { opacity: 0; transform: scale(0.88); filter: blur(8px); }
+}
+
+/* Animacin de entrada para elementos internos — sube suavemente con fade */
+@keyframes setup-fade-up {
+  from { opacity: 0; transform: translateY(18px) scale(0.18); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.setup-enter           { animation: setup-fade-up 520ms cubic-bezier(0.22,1,0.36,1) both; }
+.setup-enter.setup-delay-1 { animation-delay: 60ms;  }
+.setup-enter.setup-delay-2 { animation-delay: 120ms; }
+.setup-enter.setup-delay-3 { animation-delay: 180ms; }
+.setup-enter.setup-delay-4 { animation-delay: 240ms; }
+
+/* Variables de tamaño del tablero — calculadas a partir del padding y el gap del grid */
+#ludo-board {
+  --bp: 4px;   
+  --bg: 1px;   
+  --bcell:      calc((100% - 2 * var(--bp) - 14 * var(--bg)) / 15);
+  --bhome:      calc(6 * var(--bcell) + 5 * var(--bg));
+  --bhome-outer: calc(var(--bhome) * 0.86);   
+  --home-inset:  calc(var(--bp) + (var(--bhome) - var(--bhome-outer)) / 2);
+  --bhome-inner: calc(var(--bhome-outer) * 0.5);
+  --piece-size:  calc(var(--bhome-inner) * 0.36);
+  --inner-pad:   calc(var(--bhome-inner) * 0.05);
+  --inner-gap:   calc(var(--bhome-inner) * 0.04);
+}
+@media (min-width: 640px) {
+  #ludo-board { --bp: 6px; --bg: 1px; }
+}
+
+/* Overlay de zona de casa — cuadrado redondeado posicionado sobre las celdas base */
+.home-overlay {
+  position: absolute;
+  z-index: 10;
+  width:  var(--bhome-outer);
+  height: var(--bhome-outer);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22%;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+.home-overlay-red     { top: var(--home-inset); left:  var(--home-inset); }
+.home-overlay-blue    { top: var(--home-inset); right: var(--home-inset); }
+.home-overlay-emerald { bottom: var(--home-inset); left:  var(--home-inset); }
+.home-overlay-amber   { bottom: var(--home-inset); right: var(--home-inset); }
+
+/* Colores de fondo de cada zona de casa — oscuros para que las piezas brillantes contrasten */
+.home-zone-red     { background: rgba(155,10,10,0.65);   backdrop-filter: blur(10px); border: 2px solid rgba(239,68,68,0.85);   }
+.home-zone-blue    { background: rgba(18,45,155,0.65);   backdrop-filter: blur(10px); border: 2px solid rgba(59,130,246,0.85);  }
+.home-zone-emerald { background: rgba(5,90,45,0.65);     backdrop-filter: blur(10px); border: 2px solid rgba(16,185,129,0.85); }
+.home-zone-amber   { background: rgba(140,75,5,0.65);    backdrop-filter: blur(10px); border: 2px solid rgba(245,158,11,0.85); }
+
+/* Fichas en el tablero — esferas 3D con gradiente radial e iluminación interna */
+#ludo-board .bg-red-500 {
+  background: radial-gradient(circle at 32% 25%, #ffd5d5 0%, #f87171 32%, #c21010 75%, #7f0000 100%) !important;
+  box-shadow: 0 0 12px 5px rgba(239,68,68,0.75), 0 2px 5px rgba(0,0,0,0.45) !important;
+}
+#ludo-board .bg-blue-500 {
+  background: radial-gradient(circle at 32% 25%, #daeeff 0%, #60a5fa 32%, #1d4ed8 75%, #0c2464 100%) !important;
+  box-shadow: 0 0 12px 5px rgba(59,130,246,0.75), 0 2px 5px rgba(0,0,0,0.45) !important;
+}
+#ludo-board .bg-emerald-500 {
+  background: radial-gradient(circle at 32% 25%, #d0fff0 0%, #34d399 32%, #059669 75%, #003d24 100%) !important;
+  box-shadow: 0 0 12px 5px rgba(16,185,129,0.75), 0 2px 5px rgba(0,0,0,0.45) !important;
+}
+#ludo-board .bg-amber-500 {
+  background: radial-gradient(circle at 32% 25%, #fff8c0 0%, #fbbf24 32%, #d97706 75%, #7c3a00 100%) !important;
+  box-shadow: 0 0 12px 5px rgba(245,158,11,0.75), 0 2px 5px rgba(0,0,0,0.45) !important;
+}
+
+/* Fichas movibles — destello más intenso para que el jugador sepa cuáles puede mover */
+#ludo-board button.bg-red-500     { box-shadow: 0 0 20px 8px rgba(239,68,68,0.90),  0 0 0 2px rgba(255,180,180,0.80) !important; filter: brightness(1.15); }
+#ludo-board button.bg-blue-500    { box-shadow: 0 0 20px 8px rgba(59,130,246,0.90), 0 0 0 2px rgba(150,200,255,0.80) !important; filter: brightness(1.15); }
+#ludo-board button.bg-emerald-500 { box-shadow: 0 0 20px 8px rgba(16,185,129,0.90), 0 0 0 2px rgba(120,255,200,0.80) !important; filter: brightness(1.15); }
+#ludo-board button.bg-amber-500   { box-shadow: 0 0 20px 8px rgba(245,158,11,0.90), 0 0 0 2px rgba(255,230,100,0.80) !important; filter: brightness(1.15); }
+
+/* Dado de vidrio — mismo estilo glassmorphism que el panel del tablero */
+.dice-crystal {
+  background: rgba(255,255,255,0.30) !important;
+  border: 1.5px solid rgba(255,255,255,0.55) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+  color: #111;
+  font-weight: 800;
+}
+
+/* Joya del centro — pulsa suavemente para marcar el objetivo final del juego */
+@keyframes center-gem-pulse {
+  0%, 100% { box-shadow: 0 0 4px 2px rgba(255,255,255,0.4); opacity: 0.7; }
+  50%       { box-shadow: 0 0 12px 6px rgba(255,255,255,0.7); opacity: 1;   }
+}
+.center-gem { animation: center-gem-pulse 2.8s ease-in-out infinite; }
+
+/* Botón "TIRAR DADO" — pulso de brillo para llamar la atención del jugador */
+@keyframes btn-glow-pulse {
+  0%, 100% { box-shadow: 0 0 10px 3px var(--btn-glow, rgba(255,255,255,0.4)); }
+  50%       { box-shadow: 0 0 22px 8px var(--btn-glow, rgba(255,255,255,0.4)); }
+}
+.btn-glow-pulse { animation: btn-glow-pulse 2s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .center-gem, .btn-glow-pulse { animation: none; }
+}
+
+/* Inputs de las páginas de configuración sobre fondo oscuro — placeholder claro y focus brillante */
+.glass-input::placeholder { color: rgba(255,255,255,0.35); }
+.glass-input:focus {
+  background: rgba(255,255,255,0.20) !important;
+  border-color: rgba(255,255,255,0.50) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.12);
+}

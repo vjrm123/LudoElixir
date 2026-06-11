@@ -1,0 +1,204 @@
+<Layouts.app flash={@flash}>
+  <section
+    id="tablero-session"
+    phx-hook="JugadorSession"
+    data-codigo={@codigo}
+    class="fixed inset-0 flex items-center justify-center overflow-hidden"
+    style="background-color: #0a1f3a;"
+  >
+
+    <%!-- Imagen de fondo borrosa — div separado para que el blur no afecte al tablero --%>
+    <div class="pointer-events-none absolute inset-0"
+         style="background-image: url('/images/fondo.avif'); background-size: cover; background-position: center; filter: blur(5px); transform: scale(1.06);"></div>
+
+    <%!-- Halos de color ambiental para darle profundidad a la escena --%>
+    <div class="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-cyan-400/25 blur-3xl"></div>
+    <div class="pointer-events-none absolute right-10 top-10 h-80 w-80 rounded-full bg-blue-400/25 blur-3xl"></div>
+    <div class="pointer-events-none absolute -bottom-20 right-0 h-96 w-96 rounded-full bg-violet-400/25 blur-3xl"></div>
+
+    <%!-- Panel principal de vidrio que contiene el tablero completo --%>
+    <div class="page-emerge relative aspect-square w-[min(100vw,100vh)] overflow-hidden rounded-[32px] border-2 border-white/52 bg-white/40 shadow-[0_8px_40px_rgba(255,255,255,0.18)] backdrop-blur-[35px]">
+
+      <%!-- Líneas de reflejo en los bordes del panel para el efecto glassmorphism --%>
+      <div class="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/60"></div>
+      <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/25"></div>
+      <div class="pointer-events-none absolute inset-y-0 left-0 w-px bg-white/60"></div>
+      <div class="pointer-events-none absolute inset-y-0 right-0 w-px bg-white/25"></div>
+
+      <%!-- Grid de 15×15 celdas que forma el tablero — gap de 1px entre celdas --%>
+      <div
+        id="ludo-board"
+        phx-hook="BoardHook"
+        class="relative grid h-full w-full grid-cols-[repeat(15,minmax(0,1fr))] gap-px p-7"
+      >
+        <%!-- Mapa auxiliar: color de tablero → jugador, para saber a quiEn pertenece cada zona --%>
+        <% color_to_jugador = Map.new(@jugadores_lista, fn j -> {color_sala_to_tablero(j.color), j} end) %>
+
+        <%!-- Las 225 celdas del tablero — base y home_slot son transparentes porque los overlays los cubren --%>
+        <%= for row <- 0..14 do %>
+          <%= for col <- 0..14 do %>
+            <% cell = board_cell(row, col) %>
+            <%= if cell.kind in [:base, :home_slot] do %>
+              <div id={"cell-#{row}-#{col}"} class="aspect-square"></div>
+            <% else %>
+              <% tokens = tokens_en_celda(@token_coords, row, col) %>
+              <div id={"cell-#{row}-#{col}"} class={["relative", board_cell_class(cell)]}>
+
+                <%!-- Joya pulsante en el centro del tablero --%>
+                <%= if cell.kind == :center_core do %>
+                  <span class="grid h-full w-full place-items-center">
+                    <span class="center-gem block rounded-full"
+                          style="width: clamp(5px,2.2vmin,13px); height: clamp(5px,2.2vmin,13px); background: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.95);"></span>
+                  </span>
+                <% end %>
+
+                <%!-- Estrella en las celdas seguras donde no te pueden comer --%>
+                <%= if cell.kind == :path && Map.get(cell, :safe) do %>
+                  <span class="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center select-none font-black"
+                        style="font-size: clamp(4px,1.8vmin,9px); color: rgba(255,255,255,0.85);">✦</span>
+                <% end %>
+
+                <%!-- Fichas presentes en esta celda — botón si es movible, span si no --%>
+                <%= if tokens != [] do %>
+                  <div class="absolute inset-0 z-2 flex flex-wrap items-center justify-center p-px">
+                    <%= for token <- tokens do %>
+                      <% movible? = puede_mover_ficha?(token.ficha_id, @fichas_movibles, @jugador_id, @turno_jugador, @dado) && token.jugador_id == @jugador_id %>
+                      <div id={"token-#{token.jugador_id}-#{token.ficha_id}"}>
+                        <button :if={movible?} phx-click="mover_ficha" phx-value-ficha={token.ficha_id}
+                          class={["flex h-4 w-4 items-center justify-center rounded-full border border-white/70 font-extrabold text-white sm:h-5 sm:w-5 ring-2 ring-offset-1 ring-white/50 cursor-pointer", player_color_class(token.color)]}>
+                          {token.ficha_id}
+                        </button>
+                        <span :if={!movible?}
+                          class={["flex h-4 w-4 items-center justify-center rounded-full border border-white/40 font-bold text-white sm:h-5 sm:w-5", player_color_class(token.color)]}>
+                          {token.ficha_id}
+                        </span>
+                      </div>
+                    <% end %>
+                  </div>
+                <% end %>
+
+              </div>
+            <% end %>
+          <% end %>
+        <% end %>
+
+        <%!-- Zonas de casa de cada jugador — overlay absoluto encima de las celdas base --%>
+        <%= for {color, overlay_class} <- [
+          {:red,     "home-overlay home-overlay-red"},
+          {:blue,    "home-overlay home-overlay-blue"},
+          {:emerald, "home-overlay home-overlay-emerald"},
+          {:amber,   "home-overlay home-overlay-amber"}
+        ] do %>
+          <% jugador     = Map.get(color_to_jugador, color) %>
+          <% is_active   = jugador && @turno_jugador && @turno_jugador.id == jugador.id %>
+          <% hex         = if jugador, do: color_sala_hex(jugador.color), else: "#6366f1" %>
+          <% fichas_casa = tokens_en_casa(@token_coords, color) %>
+
+          <%!-- El anillo de brillo indica quién tiene el turno activo --%>
+          <div
+            class={[overlay_class, home_zone_bg(color)]}
+            style={
+              if is_active,
+                do:   "box-shadow: 0 0 0 3px #{hex}, 0 0 28px 8px #{hex}70;",
+                else: "box-shadow: 0 0 0 2px #{hex}66, 0 0 12px 3px #{hex}40;"
+            }
+          >
+            <%!-- Nombre del jugador sobre su zona de casa --%>
+            <p class="absolute left-0 right-0 px-2 text-center font-medium text-white"
+               style="top: 6%; font-size: clamp(0.5rem,2vmin,0.9rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px rgba(255,255,255,0.6), 0 1px 4px rgba(0,0,0,0.7); letter-spacing: 0.04em;">
+              {if jugador, do: jugador.nombre, else: ""}
+            </p>
+
+            <%!-- Cuadrado interior con las 4 fichas en casa --%>
+            <div class="grid grid-cols-2 grid-rows-2 w-[70%] aspect-square" style={home_inner_style(color)}>
+              <%= for ficha_id <- 1..4 do %>
+                <% token = Enum.find(fichas_casa, &(&1.ficha_id == ficha_id)) %>
+                <div class="flex items-center justify-center">
+                  <%= if token do %>
+                    <% movible? = puede_mover_ficha?(token.ficha_id, @fichas_movibles, @jugador_id, @turno_jugador, @dado) && token.jugador_id == @jugador_id %>
+                    <div id={"token-#{token.jugador_id}-#{token.ficha_id}"}>
+                      <button :if={movible?} phx-click="mover_ficha" phx-value-ficha={token.ficha_id}
+                        class={["flex w-[82%] items-center justify-center rounded-full border-2 border-white/70 font-extrabold text-white ring-2 ring-white/40 ring-offset-1 cursor-pointer", player_color_class(color)]}
+                        style="aspect-ratio:1/1; font-size: clamp(0.3rem,1.4vmin,0.6rem);">
+                        {token.ficha_id}
+                      </button>
+                      <span :if={!movible?}
+                        class={["flex w-[82%] items-center justify-center rounded-full border border-white/50 font-bold text-white", player_color_class(color)]}
+                        style="aspect-ratio:1/1; font-size: clamp(0.3rem,1.4vmin,0.6rem);">
+                        {token.ficha_id}
+                      </span>
+                    </div>
+                  <% else %>
+                    <%!-- Hueco vacIo donde irA la ficha cuando salga de casa --%>
+                    <div class="w-[52%] rounded-full"
+                         style="aspect-ratio:1/1; background: rgba(255,255,255,0.10); border: 1.5px solid rgba(255,255,255,0.28);"></div>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+
+          </div>
+        <% end %>
+
+        <%!-- Popup central del dado — aparece cuando hay un turno activo --%>
+        <% mi_turno = @turno_jugador != nil && @turno_jugador.id == @jugador_id %>
+
+        <%= if @turno_jugador != nil do %>
+          <div class="pointer-events-none absolute inset-0 z-[25] flex items-center justify-center">
+
+            
+
+            <%!-- El popup tiene tamaño fijo --%>
+            <%= unless @popup_minimizado && @dado != nil do %>
+              <div id="dice-popup"
+                    class="pointer-events-auto relative overflow-hidden"
+                    style="
+                      z-index: 10;
+                      background: rgba(255,255,255,0.30);
+                      backdrop-filter: blur(22px);
+                      border: 2px solid rgba(255,255,255,0.55);
+                      border-radius: clamp(12px,3vmin,20px);
+                      box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+                      width: clamp(100px,18vmin,160px);
+                      height: clamp(100px,18vmin,160px);
+                      padding: 7%;
+                    ">
+
+                <%!-- Nombre del jugador cuyo turno es --%>
+                <p class="absolute inset-x-0 font-medium uppercase"
+                    style="top:7%; padding:0 8%; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#111; font-size:clamp(0.32rem,1.6vmin,0.75rem);">
+                  {if mi_turno, do: "TU TURNO, ", else: "TURNO DE "}<span>{@turno_jugador.nombre}</span>
+                </p>
+
+                <%!-- Centro del popup: dado con animacin si ya tirO, botn si aUn no --%>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <%= if @dado != nil do %>
+                    <div id={"dado-#{@turno_jugador.id}"} phx-hook="DiceHook" data-valor={"#{@dado}"}
+                      class="dice-crystal grid place-items-center font-extrabold"
+                      style="width:54%; aspect-ratio:1/1; border-radius:18%; font-size:clamp(1rem,4.5vmin,2.5rem); will-change:transform;">
+                      {@dado}
+                    </div>
+                  <% else %>
+                    <%= if mi_turno do %>
+                      <button phx-click="tirar_dado"
+                        class="btn-glow-pulse rounded-lg border border-black/20 bg-white/50 font-black uppercase hover:bg-white/70 hover:scale-105 active:scale-95 transition-all"
+                        style="--btn-glow:rgba(0,0,0,0.15); color:#111; padding:clamp(3px,0.8vmin,6px) clamp(5px,1.4vmin,10px); font-size:clamp(0.28rem,1.1vmin,0.48rem); letter-spacing:0.06em; white-space:nowrap;">
+                        TIRAR DADO
+                      </button>
+                    <% else %>
+                      <p style="color:#444; font-size:clamp(0.28rem,1vmin,0.44rem); font-weight:600;">Tirando...</p>
+                    <% end %>
+                  <% end %>
+                </div>
+
+              </div>
+            <% end %>
+
+          </div>
+        <% end %>
+
+      </div>
+    </div>
+
+  </section>
+</Layouts.app>
