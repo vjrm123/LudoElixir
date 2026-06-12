@@ -92,7 +92,7 @@ defmodule LudoWeb.TableroLive do
         color_es = jugador.color
         color_en = color_sala_to_tablero(color_es)
         inicio   = anim_inicio(pos_anterior, color_en, color_es, ficha_id - 1)
-        pasos    = Ludo.Board.pasos_de_movimiento(pos_anterior, color_es, dado_usado)
+        pasos    = Ludo.Reglas.pasos_de_movimiento(pos_anterior, color_es, dado_usado)
 
         push_event(socket, "animar_token", %{
           token_id:    "#{jugador_id}-#{ficha_id}",

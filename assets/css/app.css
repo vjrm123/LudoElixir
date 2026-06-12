@@ -8,14 +8,14 @@
   themes: false;
 }
 
-/* Animación de entrada — la página emerge desde adentro, crece y pierde el blur */
+/* Animacion de entrada  */
 @keyframes page-emerge {
   from { opacity: 0; transform: scale(0.88); filter: blur(8px); }
   to   { opacity: 1; transform: scale(1);    filter: blur(0px); }
 }
 .page-emerge { animation: page-emerge 0.35s cubic-bezier(0.22,1,0.36,1) both; }
 
-/* Animación de salida — lo contrario: se encoge */
+/* Animacion de salida */
 @keyframes page-retreat {
   from { opacity: 1; transform: scale(1);    filter: blur(0px); }
   to   { opacity: 0; transform: scale(0.88); filter: blur(8px); }
@@ -32,7 +32,7 @@
 .setup-enter.setup-delay-3 { animation-delay: 180ms; }
 .setup-enter.setup-delay-4 { animation-delay: 240ms; }
 
-/* Variables de tamaño del tablero — calculadas a partir del padding y el gap del grid */
+/* Variables de tamaño del tablero  */
 #ludo-board {
   --bp: 4px;   
   --bg: 1px;   
@@ -49,7 +49,7 @@
   #ludo-board { --bp: 6px; --bg: 1px; }
 }
 
-/* Overlay de zona de casa — cuadrado redondeado posicionado sobre las celdas base */
+/* Overlay de zona de casa  */
 .home-overlay {
   position: absolute;
   z-index: 10;
@@ -115,7 +115,7 @@
 }
 .center-gem { animation: center-gem-pulse 2.8s ease-in-out infinite; }
 
-/* Botón "TIRAR DADO" — pulso de brillo para llamar la atención del jugador */
+/* Botón "TIRAR DADO" — pulso de brillo  */
 @keyframes btn-glow-pulse {
   0%, 100% { box-shadow: 0 0 10px 3px var(--btn-glow, rgba(255,255,255,0.4)); }
   50%       { box-shadow: 0 0 22px 8px var(--btn-glow, rgba(255,255,255,0.4)); }
@@ -126,7 +126,7 @@
   .center-gem, .btn-glow-pulse { animation: none; }
 }
 
-/* Inputs de las páginas de configuración sobre fondo oscuro — placeholder claro y focus brillante */
+/* Inputs de las paginas de configuracion sobre fondo oscuro — placeholder claro y focus brillante */
 .glass-input::placeholder { color: rgba(255,255,255,0.35); }
 .glass-input:focus {
   background: rgba(255,255,255,0.20) !important;

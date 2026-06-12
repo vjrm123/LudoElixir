@@ -5,6 +5,7 @@ import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
+
 // Colores hex de cada equipo para los tokens fantasma de la animación de movimiento
 const TOKEN_COLORS = {
   "bg-red-500":     "#ef4444",
@@ -105,7 +106,7 @@ Hooks.BoardHook = {
 }
 
 // Animación del dado: gira rápido mostrando números aleatorios y frena hasta mostrar el resultado real.
-// Espera dos frames para que el elemento ya esté pintado antes de iniciar la transición CSS.
+// Espera dos frames para que el elemento ya est pintado antes de iniciar la tran.
 Hooks.DiceHook = {
   mounted() {
     const v = parseInt(this.el.dataset.valor)
@@ -116,22 +117,22 @@ Hooks.DiceHook = {
   roll(final) {
     const el  = this.el
     let   n   = 0
-    const max = 8   // 6 giros rápidos + 2 lentos para el resultado final
+    const max = 8   // 6 giros rpidos + 2 lentos 
 
     const flip = () => {
-      const speed = n < max - 2 ? 65 : 120   // rápido al principio, lento al final
+      const speed = n < max - 2 ? 65 : 120   // rapido al principio lento al final
 
       // Rotar hacia el canto — la cara queda oculta
       el.style.transition = `transform ${speed}ms ease-in`
       el.style.transform  = "perspective(200px) rotateY(90deg)"
 
       setTimeout(() => {
-        // Cambiar el número mientras está girado — el final solo en el último flip
+        // Cambiar el nmero mientras esta girado 
         el.textContent = n < max - 1
           ? Math.floor(Math.random() * 6) + 1
           : final
 
-        // Volver al frente mostrando el número nuevo
+        // Volver al frente mostrando el numero nuevo
         el.style.transition = `transform ${speed}ms ease-out`
         el.style.transform  = "perspective(200px) rotateY(0deg)"
 
@@ -139,7 +140,7 @@ Hooks.DiceHook = {
         if (n < max) {
           setTimeout(flip, speed * 2 + 10)
         } else {
-          // Limpiar el transform para que el número final quede estático y visible
+          // Limpiar el transform para que el nmero final quede esttico y visible
           setTimeout(() => {
             el.style.transition = "none"
             el.style.transform  = ""
@@ -152,7 +153,7 @@ Hooks.DiceHook = {
   }
 }
 
-// Conexión con Phoenix LiveView
+// Conexin con Phoenix LiveView
 let liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
@@ -161,7 +162,7 @@ let liveSocket = new LiveSocket("/live", Socket, {
 
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 
-// Al navegar a otra página (push_navigate), reproducir la animación de salida
+// Al navegar a otra pagina reproducir la animacin de salida
 window.addEventListener("phx:page-loading-start", info => {
   topbar.show(300)
   if (info.detail?.kind === "redirect") {
@@ -172,7 +173,6 @@ window.addEventListener("phx:page-loading-start", info => {
 })
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
-// Botones dentro de inicio_live que cambian el modo (hero ↔ formulario) — animar la salida
 // en el mismo momento del clic, antes de que LiveView responda con el nuevo contenido
 document.addEventListener("click", e => {
   const btn = e.target.closest("#inicio-modo-crear, #inicio-modo-unirse, #inicio-volver")

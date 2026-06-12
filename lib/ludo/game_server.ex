@@ -1,43 +1,33 @@
 defmodule Ludo.GameServer do
+  @moduledoc "Proceso GenServer que gestiona el ciclo de vida de una partida"
+
   use GenServer
   require Logger
 
+  alias Ludo.Estado
+  alias Ludo.Reglas
+  alias Ludo.Board
+
   @max_jugadores 4
-  @timeout_sala :timer.minutes(60)
+  @timeout_sala  :timer.minutes(60)
 
-  defmodule Estado do
-    @enforce_keys [:codigo, :host_id]
-    defstruct [
-      :codigo,
-      :host_id,
-      jugadores: [],
-      # :esperando | :jugando | :finalizada
-      fase: :esperando,
-      turno_idx: 0,
-      dado: nil,
-      # jugador_id => [%{id, pos}]
-      tablero: %{},
-      # ids de fichas que pueden moverse este turno (set after rolling)
-      fichas_movibles: []
-    ]
-  end
-
-  # ── Public API ───────────────────────────────────────────────────────────────
+  # ── API publica ───────────────────────────────────────────────────────────────
 
   def start_link(opts) do
     codigo = Keyword.fetch!(opts, :codigo)
     GenServer.start_link(__MODULE__, opts, name: via(codigo), timeout: @timeout_sala)
   end
 
-  def get_estado(codigo),          do: GenServer.call(via(codigo), :get_estado)
-  def unirse(codigo, jugador),     do: GenServer.call(via(codigo), {:unirse, jugador})
-  def salir(codigo, jugador_id),   do: GenServer.cast(via(codigo), {:salir, jugador_id})
-  def iniciar(codigo, host_id),    do: GenServer.call(via(codigo), {:iniciar, host_id})
+  def get_estado(codigo),             do: GenServer.call(via(codigo), :get_estado)
+  def unirse(codigo, jugador),        do: GenServer.call(via(codigo), {:unirse, jugador})
+  def salir(codigo, jugador_id),      do: GenServer.cast(via(codigo), {:salir, jugador_id})
+  def iniciar(codigo, host_id),       do: GenServer.call(via(codigo), {:iniciar, host_id})
   def tirar_dado(codigo, jugador_id), do: GenServer.call(via(codigo), {:tirar_dado, jugador_id})
+
   def mover_ficha(codigo, jugador_id, ficha_id),
     do: GenServer.call(via(codigo), {:mover_ficha, jugador_id, ficha_id})
 
-  # ── Callbacks ────────────────────────────────────────────────────────────────
+  # ── Callbacks GenServer ───────────────────────────────────────────────────────
 
   @impl true
   def init(opts) do
@@ -84,8 +74,8 @@ defmodule Ludo.GameServer do
         {:reply, {:error, :ya_iniciada}, estado, @timeout_sala}
 
       true ->
-        tablero   = Ludo.Board.nuevo(estado.jugadores)
-        nuevo     = %{estado | fase: :jugando, tablero: tablero, dado: nil, turno_idx: 0}
+        tablero = Board.nuevo(estado.jugadores)
+        nuevo   = %{estado | fase: :jugando, tablero: tablero, dado: nil, turno_idx: 0}
         broadcast!(nuevo.codigo, {:partida_iniciada, nuevo})
         {:reply, {:ok, nuevo}, nuevo, @timeout_sala}
     end
@@ -108,17 +98,13 @@ defmodule Ludo.GameServer do
       true ->
         resultado = Enum.random(1..6)
         color     = jugador_en_turno.color
-        movibles  = Ludo.Board.fichas_movibles(estado.tablero, jugador_id, color, resultado)
+        movibles  = Reglas.fichas_movibles(estado.tablero, jugador_id, color, resultado)
+        nuevo     = %{estado | dado: resultado, fichas_movibles: movibles}
 
-        nuevo = %{estado | dado: resultado, fichas_movibles: movibles}
-
-        # Broadcast dice result first so the UI shows it
         broadcast!(nuevo.codigo, {:dado_tirado, resultado, jugador_id, nuevo})
 
-        # If no valid moves, auto-pass after 2s so the player sees the dice
-        if movibles == [] do
-          Process.send_after(self(), {:auto_pasar_turno, resultado}, 2000)
-        end
+        # Si no hay movimientos posibles, pasar turno automaticamente tras 2 segundos
+        if movibles == [], do: Process.send_after(self(), {:auto_pasar_turno, resultado}, 2000)
 
         {:reply, {:ok, resultado}, nuevo, @timeout_sala}
     end
@@ -142,25 +128,22 @@ defmodule Ludo.GameServer do
         {:reply, {:error, :ficha_no_puede_moverse}, estado, @timeout_sala}
 
       true ->
-        dado_usado  = estado.dado
-        fichas_prev = Map.get(estado.tablero, jugador_id, [])
+        dado_usado   = estado.dado
+        fichas_prev  = Map.get(estado.tablero, jugador_id, [])
         pos_anterior = fichas_prev |> Enum.find(&(&1.id == ficha_id)) |> case do
           nil -> nil
           f   -> f.pos
         end
 
-        case Ludo.Board.aplicar_movimiento(
-               estado.tablero, jugador_id, ficha_id,
-               dado_usado, estado.jugadores
-             ) do
+        case Reglas.aplicar_movimiento(estado.tablero, jugador_id, ficha_id, dado_usado, estado.jugadores) do
           {:error, _} = err ->
             {:reply, err, estado, @timeout_sala}
 
           {:ok, nuevo_tablero, eventos} ->
             nuevo =
               %{estado | tablero: nuevo_tablero, dado: nil, fichas_movibles: []}
-              |> maybe_finalizar(jugador_id, eventos)
-              |> avanzar_turno_si_no_seis(dado_usado, eventos)
+              |> Estado.finalizar(eventos)
+              |> Estado.avanzar_turno_si_no_seis(dado_usado, eventos)
 
             broadcast!(nuevo.codigo,
               {:ficha_movida, jugador_id, ficha_id, dado_usado, pos_anterior, nuevo, eventos})
@@ -171,7 +154,7 @@ defmodule Ludo.GameServer do
 
   @impl true
   def handle_cast({:salir, jugador_id}, estado) do
-    jugadores   = Enum.reject(estado.jugadores, &(&1.id == jugador_id))
+    jugadores    = Enum.reject(estado.jugadores, &(&1.id == jugador_id))
     nuevo_estado = %{estado | jugadores: jugadores}
 
     nuevo_estado =
@@ -183,18 +166,16 @@ defmodule Ludo.GameServer do
 
     broadcast!(nuevo_estado.codigo, {:jugador_salio, nuevo_estado})
 
-    if length(jugadores) == 0 do
-      {:stop, :normal, nuevo_estado}
-    else
-      {:noreply, nuevo_estado, @timeout_sala}
-    end
+    if length(jugadores) == 0,
+      do:   {:stop, :normal, nuevo_estado},
+      else: {:noreply, nuevo_estado, @timeout_sala}
   end
 
   @impl true
   def handle_info({:auto_pasar_turno, dado_resultado}, estado) do
-    # Only advance if the dado is still set (player didn't move in time)
+    # Solo avanzar si el dado sigue activo (el jugador no movio a tiempo)
     if estado.dado != nil do
-      nuevo = avanzar_turno(estado, dado_resultado)
+      nuevo = Estado.avanzar_turno(estado, dado_resultado)
       broadcast!(nuevo.codigo, {:turno_pasado, nuevo})
       {:noreply, nuevo, @timeout_sala}
     else
@@ -204,37 +185,11 @@ defmodule Ludo.GameServer do
 
   @impl true
   def handle_info(:timeout, estado) do
-    Logger.info("Sala #{estado.codigo} expiró por inactividad")
+    Logger.info("Sala #{estado.codigo} expirada por inactividad")
     {:stop, :normal, estado}
   end
 
-  # ── Private helpers ───────────────────────────────────────────────────────────
-
-  defp avanzar_turno(estado, dado) do
-    n = length(estado.jugadores)
-    # Same player again on 6, unless game over
-    if dado == 6 && estado.fase == :jugando do
-      %{estado | dado: nil, fichas_movibles: []}
-    else
-      %{estado | dado: nil, fichas_movibles: [], turno_idx: rem(estado.turno_idx + 1, n)}
-    end
-  end
-
-  defp avanzar_turno_si_no_seis(estado, dado, eventos) do
-    if :jugador_gana in eventos do
-      estado
-    else
-      avanzar_turno(estado, dado)
-    end
-  end
-
-  defp maybe_finalizar(estado, _jugador_id, eventos) do
-    if :jugador_gana in eventos do
-      %{estado | fase: :finalizada}
-    else
-      estado
-    end
-  end
+  # ── Helpers privados ──────────────────────────────────────────────────────────
 
   defp via(codigo), do: {:via, Registry, {Ludo.SalaRegistry, codigo}}
 

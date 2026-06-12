@@ -45,12 +45,12 @@ defmodule Ludo.Salas do
   def unirse_sala(codigo, nombre_jugador, color) do
     codigo = normalizar_codigo(codigo)
 
-    with :ok <- validar_color(color),
-         :ok <- validar_nombre(nombre_jugador),
-         :ok <- sala_existe_o_error(codigo),
-         jugador_id <- generar_id(),
-         jugador <- %{id: jugador_id, nombre: nombre_jugador, color: color},
-         {:ok, estado} <- GameServer.unirse(codigo, jugador) do
+    with  :ok <- validar_color(color),
+          :ok <- validar_nombre(nombre_jugador),
+          :ok <- sala_existe_o_error(codigo),
+          jugador_id <- generar_id(),
+          jugador <- %{id: jugador_id, nombre: nombre_jugador, color: color},
+          {:ok, estado} <- GameServer.unirse(codigo, jugador) do
       {:ok, %{jugador_id: jugador_id, estado: estado}}
     end
   end
