@@ -2,8 +2,6 @@
 defmodule LudoWeb.LobbyLive do
   use LudoWeb, :live_view
 
-  @color_hex %{rojo: "#ef4444", azul: "#3b82f6", verde: "#10b981", amarillo: "#f59e0b"}
-
   def mount(%{"codigo" => codigo}, session, socket) do
     jugador_id = session["jugador_id"]
 
@@ -14,18 +12,18 @@ defmodule LudoWeb.LobbyLive do
         end
 
         {:ok,
-         assign(socket,
-           codigo: codigo,
-           jugador_id: jugador_id,
-           estado: estado,
-           color_hex: @color_hex
-         )}
+          assign(socket,
+            codigo: codigo,
+            jugador_id: jugador_id,
+            estado: estado,
+            color_hex: Ludo.Colores.mapa_hex()
+          )}
 
       {:error, :sala_no_existe} ->
         {:ok,
-         socket
-         |> put_flash(:error, "La sala #{codigo} no existe.")
-         |> push_navigate(to: ~p"/")}
+          socket
+          |> put_flash(:error, "La sala #{codigo} no existe.")
+          |> push_navigate(to: ~p"/")}
     end
   end
 

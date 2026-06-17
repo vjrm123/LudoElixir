@@ -1,6 +1,4 @@
 defmodule Ludo.GameServer do
-  @moduledoc "Proceso GenServer que gestiona el ciclo de vida de una partida"
-
   use GenServer
   require Logger
 
@@ -11,7 +9,7 @@ defmodule Ludo.GameServer do
   @max_jugadores 4
   @timeout_sala  :timer.minutes(60)
 
-  # ── API publica ───────────────────────────────────────────────────────────────
+  # API publica
 
   def start_link(opts) do
     codigo = Keyword.fetch!(opts, :codigo)
@@ -27,7 +25,6 @@ defmodule Ludo.GameServer do
   def mover_ficha(codigo, jugador_id, ficha_id),
     do: GenServer.call(via(codigo), {:mover_ficha, jugador_id, ficha_id})
 
-  # ── Callbacks GenServer ───────────────────────────────────────────────────────
 
   @impl true
   def init(opts) do
@@ -189,7 +186,7 @@ defmodule Ludo.GameServer do
     {:stop, :normal, estado}
   end
 
-  # ── Helpers privados ──────────────────────────────────────────────────────────
+  #  Helpers privados 
 
   defp via(codigo), do: {:via, Registry, {Ludo.SalaRegistry, codigo}}
 

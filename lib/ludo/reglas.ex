@@ -1,9 +1,5 @@
 defmodule Ludo.Reglas do
-  @moduledoc "Reglas del juego — movimiento de fichas, capturas y condicion de victoria"
-
   alias Ludo.Board
-
-  # ── API publica ───────────────────────────────────────────────────────────────
 
   @doc "Lista de ids de fichas que pueden moverse legalmente con el resultado del dado."
   def fichas_movibles(tablero, jugador_id, color, dado) do
@@ -56,7 +52,7 @@ defmodule Ludo.Reglas do
     |> Enum.reject(&is_nil/1)
   end
 
-  # ── Validacion de movimiento ───────────────────────────────────────────────────
+  #  Validacion de movimiento
 
   defp puede_mover?(:casa, _color, 6), do: true
   defp puede_mover?(:casa, _color, _), do: false
@@ -72,7 +68,7 @@ defmodule Ludo.Reglas do
 
   defp puede_mover?({:pasillo, pos}, _color, dado), do: pos + dado <= 6
 
-  # ── Calculo de posicion nueva ─────────────────────────────────────────────────
+  #  Calculo de posicion nueva
 
   defp nueva_posicion(:casa, color, 6), do: {:camino, Board.casilla_salida(color)}
 
@@ -96,7 +92,7 @@ defmodule Ludo.Reglas do
     end
   end
 
-  # ── Capturas ──────────────────────────────────────────────────────────────────
+  # Capturas
 
   defp resolver_capturas(tablero, atacante_id, {:camino, n}, jugadores) do
     if Board.celda_segura?(n) do
@@ -124,7 +120,7 @@ defmodule Ludo.Reglas do
 
   defp resolver_capturas(tablero, _id, _pos, _jugadores), do: {tablero, []}
 
-  # ── Utilidades internas ───────────────────────────────────────────────────────
+  # Utilidades internas
 
   defp sig_pos(:casa, color), do: {:camino, Board.casilla_salida(color)}
 

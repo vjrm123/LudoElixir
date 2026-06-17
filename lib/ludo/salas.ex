@@ -2,7 +2,7 @@
 defmodule Ludo.Salas do
   alias Ludo.GameServer
 
-  # ─── Generación de código de sala ─────────────────────────────────────────
+  #  Generacion de codigo de sala
 
   @chars "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
   @longitud_codigo 6
@@ -16,32 +16,30 @@ defmodule Ludo.Salas do
   end
 
   defp codigo_unico do
-    # Genera hasta encontrar uno que no esté en uso
+    # Genera hasta encontrar uno que no este en uso
     codigo = generar_codigo()
     if sala_existe?(codigo), do: codigo_unico(), else: codigo
   end
 
   # ─── API pública ──────────────────────────────────────────────────────────
 
-  @doc """
-  Crea una nueva sala y arrancar su GameServer.
-  Retorna {:ok, %{codigo, estado}} o {:error, razon}.
-  """
+
+  #Crea una nueva sala y arrancar su GameServer
+
   def crear_sala(nombre_jugador, color) do
     with :ok <- validar_color(color),
-         :ok <- validar_nombre(nombre_jugador),
-         codigo <- codigo_unico(),
-         host_id <- generar_id(),
-         jugador <- %{id: host_id, nombre: nombre_jugador, color: color},
-         {:ok, _pid} <- arrancar_game_server(codigo, host_id),
-         {:ok, estado} <- GameServer.unirse(codigo, jugador) do
+          :ok <- validar_nombre(nombre_jugador),
+          codigo <- codigo_unico(),
+          host_id <- generar_id(),
+          jugador <- %{id: host_id, nombre: nombre_jugador, color: color},
+          {:ok, _pid} <- arrancar_game_server(codigo, host_id),
+          {:ok, estado} <- GameServer.unirse(codigo, jugador) do
       {:ok, %{codigo: codigo, host_id: host_id, estado: estado}}
     end
   end
 
-  @doc """
-  Une a un jugador a una sala existente.
-  """
+  #Une a un jugador a una sala existente
+
   def unirse_sala(codigo, nombre_jugador, color) do
     codigo = normalizar_codigo(codigo)
 
@@ -55,9 +53,8 @@ defmodule Ludo.Salas do
     end
   end
 
-  @doc """
-  Obtiene el estado actual de una sala.
-  """
+  # Obtiene el estado actual de una sala.
+
   def obtener_sala(codigo) do
     codigo = normalizar_codigo(codigo)
 
@@ -68,9 +65,8 @@ defmodule Ludo.Salas do
     end
   end
 
-  @doc """
-  Saca a un jugador de la sala (usado en terminate del LiveView).
-  """
+  # Saca a un jugador de la sala
+
   def salir_sala(codigo, jugador_id) do
     codigo = normalizar_codigo(codigo)
 
@@ -81,9 +77,8 @@ defmodule Ludo.Salas do
     :ok
   end
 
-  @doc """
-  Inicia la partida. Solo el host puede llamar esto.
-  """
+  # Inicia la partida. Solo el host puede llamar esto.
+
   def iniciar_partida(codigo, host_id) do
     codigo = normalizar_codigo(codigo)
 
@@ -92,16 +87,13 @@ defmodule Ludo.Salas do
     end
   end
 
-  @doc """
-  Suscribe el proceso actual al topic de la sala.
-  Llamar desde LiveView.mount/3.
-  """
+  
   def suscribir(codigo) do
     codigo = normalizar_codigo(codigo)
     Phoenix.PubSub.subscribe(Ludo.PubSub, "sala:#{codigo}")
   end
 
-  @colores_validos [:rojo, :azul, :verde, :amarillo]
+  @colores_validos Ludo.Colores.lista()
 
   defp validar_color(color) when color in @colores_validos, do: :ok
   defp validar_color(_), do: {:error, :color_invalido}

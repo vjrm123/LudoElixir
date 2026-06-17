@@ -2,9 +2,6 @@
 defmodule LudoWeb.InicioLive do
   use LudoWeb, :live_view
 
-  @colores [:rojo, :azul, :verde, :amarillo]
-  @color_hex %{rojo: "#ef4444", azul: "#3b82f6", verde: "#10b981", amarillo: "#f59e0b"}
-
   def mount(_params, _session, socket) do
     socket =
       socket
@@ -14,8 +11,8 @@ defmodule LudoWeb.InicioLive do
         color: nil,
         codigo_entrada: "",
         error: nil,
-        colores: @colores,
-        color_hex: @color_hex
+        colores: Ludo.Colores.lista(),
+        color_hex: Ludo.Colores.mapa_hex()
       )
       |> assign_inicio_form()
 
@@ -33,20 +30,20 @@ defmodule LudoWeb.InicioLive do
 
   def handle_event("change_nombre", %{"value" => val}, socket) do
     {:noreply,
-     socket
-     |> assign(nombre: val, error: nil)
-     |> assign_inicio_form()}
+      socket
+      |> assign(nombre: val, error: nil)
+      |> assign_inicio_form()}
   end
 
   def handle_event("change_codigo", %{"value" => val}, socket) do
     {:noreply,
-     socket
-     |> assign(codigo_entrada: String.upcase(val), error: nil)
-     |> assign_inicio_form()}
+      socket
+      |> assign(codigo_entrada: String.upcase(val), error: nil)
+      |> assign_inicio_form()}
   end
 
   def handle_event("change_color", %{"color" => color}, socket) do
-    color_atom = Enum.find(@colores, &(Atom.to_string(&1) == color))
+    color_atom = Enum.find(Ludo.Colores.lista(), &(Atom.to_string(&1) == color))
 
     if color_atom do
       {:noreply, assign(socket, color: color_atom, error: nil)}
@@ -57,10 +54,10 @@ defmodule LudoWeb.InicioLive do
 
   def handle_event("actualizar_form", params, socket) do
     {:noreply,
-     socket
-     |> assign_form_params(params)
-     |> assign(error: nil)
-     |> assign_inicio_form()}
+      socket
+      |> assign_form_params(params)
+      |> assign(error: nil)
+      |> assign_inicio_form()}
   end
 
   def handle_event("crear_sala", params, socket) do
@@ -72,9 +69,9 @@ defmodule LudoWeb.InicioLive do
     case Ludo.Salas.crear_sala(socket.assigns.nombre, socket.assigns.color) do
       {:ok, %{codigo: codigo, host_id: host_id}} ->
         {:noreply,
-         socket
-         |> push_event("set_jugador_id", %{jugador_id: host_id, codigo: codigo})
-         |> push_navigate(to: ~p"/lobby/#{codigo}")}
+          socket
+          |> push_event("set_jugador_id", %{jugador_id: host_id, codigo: codigo})
+          |> push_navigate(to: ~p"/lobby/#{codigo}")}
 
       {:error, razon} ->
         {:noreply, assign(socket, error: traducir_error(razon))}
@@ -92,9 +89,9 @@ defmodule LudoWeb.InicioLive do
     case Ludo.Salas.unirse_sala(codigo, nombre, color) do
       {:ok, %{jugador_id: jugador_id}} ->
         {:noreply,
-         socket
-         |> push_event("set_jugador_id", %{jugador_id: jugador_id, codigo: codigo})
-         |> push_navigate(to: ~p"/lobby/#{codigo}")}
+          socket
+          |> push_event("set_jugador_id", %{jugador_id: jugador_id, codigo: codigo})
+          |> push_navigate(to: ~p"/lobby/#{codigo}")}
 
       {:error, razon} ->
         {:noreply, assign(socket, error: traducir_error(razon))}
@@ -125,7 +122,7 @@ defmodule LudoWeb.InicioLive do
   end
 
   defp traducir_error(:sala_no_existe), do: "La sala no existe"
-  defp traducir_error(:sala_llena), do: "La sala está llena (maximo 4 jugadores)"
+  defp traducir_error(:sala_llena), do: "La sala estllena (maximo 4 jugadores)"
   defp traducir_error(:color_tomado), do: "Ese color ya fue elegido por otro jugador"
   defp traducir_error(:nombre_invalido), do: "El nombre debe tener al menos 2 caracteres"
   defp traducir_error(:color_invalido), do: "Selecciona un color valido"

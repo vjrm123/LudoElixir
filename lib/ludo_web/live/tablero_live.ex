@@ -1,20 +1,8 @@
 defmodule LudoWeb.TableroLive do
   use LudoWeb, :live_view
 
-  @path_cells MapSet.new([
-    {6,0},{6,1},{6,2},{6,3},{6,4},{6,5},
-    {5,6},{4,6},{3,6},{2,6},{1,6},{0,6},
-    {0,7},{0,8},
-    {1,8},{2,8},{3,8},{4,8},{5,8},
-    {6,9},{6,10},{6,11},{6,12},{6,13},{6,14},
-    {7,14},{8,14},
-    {8,13},{8,12},{8,11},{8,10},{8,9},
-    {9,8},{10,8},{11,8},{12,8},{13,8},{14,8},
-    {14,7},{14,6},
-    {13,6},{12,6},{11,6},{10,6},{9,6},
-    {8,5},{8,4},{8,3},{8,2},{8,1},{8,0},
-    {7,0}
-  ])
+  # Las celdas del camino ya estan definidas en Ludo.Board, no se repiten aqui.
+  @path_cells MapSet.new(Ludo.Board.todas_las_coords())
   @home_slots %{
     red:     [{1,1},{1,4},{4,1},{4,4}],
     blue:    [{1,10},{1,13},{4,10},{4,13}],
@@ -23,7 +11,7 @@ defmodule LudoWeb.TableroLive do
   }
   @start_cells %{red: {6,1}, blue: {1,8}, emerald: {13,6}, amber: {8,13}}
 
-  # ── Mount ────────────────────────────────────────────────────────────────────
+  # Mount
 
   def mount(%{"codigo" => codigo}, _session, socket) do
     case Ludo.Salas.obtener_sala(codigo) do
@@ -31,23 +19,23 @@ defmodule LudoWeb.TableroLive do
         if connected?(socket), do: Ludo.Salas.suscribir(codigo)
 
         {:ok,
-         socket
-         |> assign(codigo: codigo, jugador_id: nil)
-         |> sync_estado(estado)}
+          socket
+          |> assign(codigo: codigo, jugador_id: nil)
+          |> sync_estado(estado)}
 
       {:error, :sala_no_existe} ->
         {:ok,
-         socket
-         |> put_flash(:error, "La sala no existe.")
-         |> push_navigate(to: ~p"/")}
+          socket
+          |> put_flash(:error, "La sala no existe.")
+          |> push_navigate(to: ~p"/")}
     end
   end
 
-  # ── Events ───────────────────────────────────────────────────────────────────
+  # Events
 
   def handle_event("restore_jugador", %{"jugador_id" => jid}, socket) do
     en_sala? = socket.assigns.jugadores_lista
-               |> Enum.any?(&(&1.id == jid))
+                |> Enum.any?(&(&1.id == jid))
     {:noreply, if(en_sala?, do: assign(socket, jugador_id: jid), else: socket)}
   end
 
@@ -74,7 +62,7 @@ defmodule LudoWeb.TableroLive do
     end
   end
 
-  # ── PubSub ───────────────────────────────────────────────────────────────────
+  # PubSub
 
   def handle_info({:dado_tirado, resultado, jugador_id, nuevo_estado}, socket) do
     socket =
@@ -91,7 +79,7 @@ defmodule LudoWeb.TableroLive do
       if jugador && pos_anterior && dado_usado do
         color_es = jugador.color
         color_en = color_sala_to_tablero(color_es)
-        inicio   = anim_inicio(pos_anterior, color_en, color_es, ficha_id - 1)
+        inicio   = pos_to_coords(pos_anterior, color_es, ficha_id - 1)
         pasos    = Ludo.Reglas.pasos_de_movimiento(pos_anterior, color_es, dado_usado)
 
         push_event(socket, "animar_token", %{
@@ -122,7 +110,7 @@ defmodule LudoWeb.TableroLive do
 
   def handle_info(_, socket), do: {:noreply, socket}
 
-  # ── State sync ────────────────────────────────────────────────────────────────
+  #State sync
 
   # Sincroniza el estado del servidor con los assigns de LiveView.
   # Cuando el dado vuelve a nil (tras mover ficha o pasar turno),
@@ -176,12 +164,13 @@ defmodule LudoWeb.TableroLive do
   end
 
   defp pos_to_coords({:pasillo, p}, color_es, _slot) do
-    Ludo.Board.home_lane_coords(color_es) |> Enum.at(p - 1)
+    Ludo.Board.home_lane_coords(color_es) |> Enum.at(p - 1, {7, 7})
   end
 
   defp pos_to_coords(:meta, _color, _slot), do: {7, 7}
+  defp pos_to_coords(_pos, _color, _slot), do: {7, 7}
 
-  # ── Board rendering helpers ──────────────────────────────────────────────────
+  # Board rendering helpers
 
   def board_cell(row, col) do
     cond do
@@ -305,30 +294,12 @@ defmodule LudoWeb.TableroLive do
   def color_hex(:blue),    do: "#2563eb"
   def color_hex(:emerald), do: "#059669"
   def color_hex(:amber),   do: "#d97706"
+  def color_hex(_),        do: "#6366f1"
 
   def color_sala_nombre(c), do: color_name(color_sala_to_tablero(c))
 
-  def color_sala_hex(:rojo),     do: "#dc2626"
-  def color_sala_hex(:azul),     do: "#2563eb"
-  def color_sala_hex(:verde),    do: "#059669"
-  def color_sala_hex(:amarillo), do: "#d97706"
-  def color_sala_hex(_),         do: "#6366f1"
-
-  defp anim_inicio(:casa, color_en, _color_es, slot_idx) do
-    slots = @home_slots[color_en] || []
-    Enum.at(slots, slot_idx, {0, 0})
-  end
-
-  defp anim_inicio({:camino, n}, _color_en, _color_es, _slot) do
-    Ludo.Board.cell_coords(n)
-  end
-
-  defp anim_inicio({:pasillo, p}, _color_en, color_es, _slot) do
-    Ludo.Board.home_lane_coords(color_es) |> Enum.at(p - 1, {7, 7})
-  end
-
-  defp anim_inicio(:meta, _color_en, _color_es, _slot), do: {7, 7}
-  defp anim_inicio(_, _color_en, _color_es, _slot), do: {7, 7}
+  # Mismos valores que color_hex, solo traduce el color de sala al color del tablero.
+  def color_sala_hex(c), do: color_hex(color_sala_to_tablero(c))
 
   def color_sala_to_tablero(:rojo),     do: :red
   def color_sala_to_tablero(:azul),     do: :blue
@@ -336,7 +307,7 @@ defmodule LudoWeb.TableroLive do
   def color_sala_to_tablero(:amarillo), do: :amber
   def color_sala_to_tablero(c),         do: c
 
-  # ── Board geometry helpers ────────────────────────────────────────────────────
+  # Board geometry helpers 
 
   defp home_slot_color(row, col) do
     Enum.find_value(@home_slots, fn {color, slots} ->

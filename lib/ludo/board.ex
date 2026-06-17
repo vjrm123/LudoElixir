@@ -1,7 +1,4 @@
 defmodule Ludo.Board do
-  @moduledoc "Geometria del tablero — camino principal, pasillos y coordenadas de celda"
-
-  # 52 celdas del camino externo en orden horario empezando por la salida de Rojo
   @path [
     {6,1},{6,2},{6,3},{6,4},{6,5},
     {5,6},{4,6},{3,6},{2,6},{1,6},
@@ -34,21 +31,26 @@ defmodule Ludo.Board do
   # Mapa n => {row, col} calculado en tiempo de compilacion
   @cell_coords @path |> Enum.with_index(1) |> Map.new(fn {rc, n} -> {n, rc} end)
 
-  # ── Coordenadas ───────────────────────────────────────────────────────────────
+  #  Coordenadas
 
   def cell_coords(n),          do: Map.get(@cell_coords, n)
   def home_lane_coords(color), do: Map.get(@home_lanes, color, [])
   def home_entry(color),       do: @home_entry[color]
   def celda_segura?(n),        do: MapSet.member?(@safe_cells, n)
 
-  # ── Casillas de salida por color ──────────────────────────────────────────────
+  # Todas las coordenadas del camino principal, sin orden particular.
+  # Usado por la UI para saber que celdas son parte del camino sin
+  # tener que repetir la lista a mano.
+  def todas_las_coords, do: Map.values(@cell_coords)
+
+  #Casillas de salida por color
 
   def casilla_salida(:rojo),     do: 1
   def casilla_salida(:azul),     do: 14
   def casilla_salida(:verde),    do: 40
   def casilla_salida(:amarillo), do: 27
 
-  # ── Tablero inicial ───────────────────────────────────────────────────────────
+  # Tablero inicial
 
   def nuevo(jugadores) do
     Map.new(jugadores, fn jugador ->
@@ -56,12 +58,4 @@ defmodule Ludo.Board do
       {jugador.id, fichas}
     end)
   end
-
-  # ── Coordenadas de renderizado ────────────────────────────────────────────────
-
-  @doc "Devuelve la posicion de renderizado de una ficha dado su pos y color."
-  def coords_para_pos(:casa, _color, slot_idx),     do: {:casa, slot_idx}
-  def coords_para_pos({:camino, n}, _color, _idx),  do: cell_coords(n)
-  def coords_para_pos({:pasillo, p}, color, _idx),  do: Enum.at(home_lane_coords(color), p - 1)
-  def coords_para_pos(:meta, _color, _idx),         do: {7, 7}
 end

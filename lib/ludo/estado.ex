@@ -1,5 +1,4 @@
 defmodule Ludo.Estado do
-  @moduledoc "Struct de la partida y funciones puras de transicion de turno"
 
   @enforce_keys [:codigo, :host_id]
   defstruct [
@@ -16,7 +15,7 @@ defmodule Ludo.Estado do
     fichas_movibles: []
   ]
 
-  # Avanza al siguiente jugador, o repite turno si saco 6
+  # Avanza al siguiente jugador o repite turno si saco 6
   def avanzar_turno(%__MODULE__{} = estado, dado) do
     n = length(estado.jugadores)
     if dado == 6 && estado.fase == :jugando do
@@ -26,7 +25,7 @@ defmodule Ludo.Estado do
     end
   end
 
-  # Avanza el turno solo si el dado no fue 6, o si alguien ya gano
+  # Avanza el turno solo si el dado no fue 6 o si alguien ya gano
   def avanzar_turno_si_no_seis(%__MODULE__{} = estado, dado, eventos) do
     if :jugador_gana in eventos, do: estado, else: avanzar_turno(estado, dado)
   end
