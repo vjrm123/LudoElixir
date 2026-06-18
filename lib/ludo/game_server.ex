@@ -170,7 +170,7 @@ defmodule Ludo.GameServer do
 
   @impl true
   def handle_info({:auto_pasar_turno, dado_resultado}, estado) do
-    # Solo avanzar si el dado sigue activo (el jugador no movio a tiempo)
+    # Solo avanzar si el dado sigue activo 
     if estado.dado != nil do
       nuevo = Estado.avanzar_turno(estado, dado_resultado)
       broadcast!(nuevo.codigo, {:turno_pasado, nuevo})
@@ -186,7 +186,7 @@ defmodule Ludo.GameServer do
     {:stop, :normal, estado}
   end
 
-  #  Helpers privados 
+  #  Helpers privados
 
   defp via(codigo), do: {:via, Registry, {Ludo.SalaRegistry, codigo}}
 
