@@ -1,0 +1,111 @@
+@startuml ActividadesLudo
+skinparam activityBackgroundColor #F4F6F7
+skinparam activityBorderColor #2E86C1
+skinparam partitionBackgroundColor #E8F8F5
+skinparam partitionBorderColor #1ABC9C
+skinparam noteBackgroundColor #FEF9E7
+skinparam noteBorderColor #F39C12
+
+start
+
+partition "Jugador activo (LiveView)" {
+  :Click "Tirar dado";
+  :GenServer.call(tirar_dado);
+}
+
+partition "GenServer" {
+  :Recibe mensaje;
+  if (¿turno correcto?) then (sí)
+    if (¿ya tiró?) then (sí)
+      :Responder error;
+      -up-> VUELVE
+    else (no)
+      :Generar 1..6;
+      :Calcular fichas movibles;
+      :Cancelar timer;
+      :Actualizar estado;
+    endif
+  else (no)
+    :Responder error;
+    -up-> VUELVE
+  endif
+
+  split
+    :broadcast dado_tirado;
+    split again
+    :Responder OK;
+  end split
+}
+
+partition "PubSub" {
+  :Distribuye broadcast;
+}
+
+partition "LiveViews" {
+  :handle_info;
+  :sync_estado;
+  if (¿es mi turno?) then (sí)
+    :Muestra fichas movibles;
+  else (no)
+    :Muestra "Tirando...";
+  endif
+}
+
+partition "Jugador activo" {
+  :Click ficha;
+  :GenServer.call(mover_ficha);
+}
+
+partition "GenServer" {
+  :Validar movimiento;
+  :Aplicar reglas;
+  if (¿captura?) then (sí)
+    :Enviar ficha a casa;
+  else (no)
+    :Actualizar posición;
+  endif
+  if (¿ganó?) then (sí)
+    :Finalizar partida;
+  endif
+
+  split
+    :broadcast ficha_movida;
+    split again
+    :Avanzar turno;
+    split again
+    :Programar timeout 30 s;
+    split again
+    :Responder OK;
+  end split
+}
+
+partition "LiveViews" {
+  :handle_info ficha_movida;
+  :sync_estado;
+  if (¿soy quien movió?) then (sí)
+    :Animar ficha;
+  endif
+  if (¿fase finalizada?) then (sí)
+    :Banner ganador;
+    stop
+  endif
+}
+
+partition "Timer (paralelo)" {
+  :send_after 30 s;
+  :Expirado;
+  if (¿timeout válido?) then (sí)
+    :Remover jugador;
+    :Avanzar turno;
+  else (no)
+    :Ignorar timer;
+  endif
+  -up-> VUELVE
+}
+
+partition "VUELVE" {
+  :Nuevo turno;\n(esperar acción);
+  -up-> :Jugador activo\n(LiveView);
+}
+
+@enduml

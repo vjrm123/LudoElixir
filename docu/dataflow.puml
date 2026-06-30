@@ -1,0 +1,42 @@
+@startuml DataFlow
+skinparam backgroundColor #FAFBFC
+skinparam componentStyle rectangle
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 10
+skinparam arrowColor #2E86C1
+skinparam arrowThickness 2
+
+title Flujo de Datos - Una acción del jugador
+
+component "Navegador\n(JavaScript)" as browser #D5F5E3
+component "LiveView\nhandle_event/3" as lv #85C1E9
+component "Ludo.Salas\n(facade)" as salas #85C1E9
+component "Ludo.GameServer\n(GenServer)" as gs #F5B041
+component "Ludo.Reglas\n(funciones puras)" as reglas #F0B27A
+component "Phoenix.PubSub\nsala:CODIGO" as pub #85C1E9
+component "LiveView\nhandle_info/2" as lv2 #85C1E9
+component "Hooks JS\nBoardHook / DiceHook" as hooks #D5F5E3
+
+note right of reglas
+  Sin efectos secundarios.
+  Recibe estado → devuelve
+  nuevo estado + eventos.
+end note
+
+note right of gs
+  Buzón FIFO. Procesa un
+  mensaje a la vez. Mutación
+  del estado central.
+end note
+
+browser -r-> lv : phx-click="tirar_dado"
+lv -r-> salas : Ludo.Salas.tirar_dado()
+salas -r-> gs : GenServer.call()
+gs -d-> reglas : Reglas.fichas_movibles()
+reglas -u-> gs : {:ok, movibles}
+gs -d-> pub : PubSub.broadcast()
+pub -d-> lv2 : handle_info()
+lv2 -r-> hooks : push_event()
+hooks -u-> browser : Animación JS
+
+@enduml

@@ -1,0 +1,404 @@
+\documentclass[11pt,a4paper]{article}
+
+% ─── Paquetes ────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+% es-noshorthands desactiva los caracteres activos ("., <, >) que babel-spanish
+% activa por defecto y que rompen el parser de pgfkeys/TikZ.
+\usepackage[spanish,es-noshorthands]{babel}
+\usepackage[margin=2.3cm]{geometry}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+
+% ─── Estilo general ──────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+  citecolor=blue!60!black,
+  plainpages=false,
+  pdfpagelabels
+}
+
+% Evita el warning de fancyhdr "headheight is too small".
+\setlength{\headheight}{14pt}
+\setlength{\topmargin}{-3pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{LudoElixir}}
+\fancyhead[R]{Documentación Técnica}
+\fancyfoot[C]{\thepage}
+
+\titleformat{\section}{\Large\bfseries\color{blue!50!black}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{blue!40!black}}{\thesubsection}{1em}{}
+
+% ─── Listado de código Elixir ────────────────────────────────────────────────
+\definecolor{elxbg}{HTML}{F7F7FA}
+\definecolor{elxkw}{HTML}{8E44AD}
+\definecolor{elxstr}{HTML}{27AE60}
+\definecolor{elxcom}{HTML}{7F8C8D}
+\definecolor{elxatom}{HTML}{C0392B}
+
+\lstdefinelanguage{elixir}{
+  morekeywords={def,defp,defmodule,do,end,if,else,case,cond,when,
+                use,alias,import,require,fn,true,false,nil,
+                with,for,in,not,and,or,receive,send,spawn,
+                @impl,@doc,@moduledoc},
+  sensitive=true,
+  morecomment=[l]{\#},
+  morestring=[b]",
+}
+
+\lstset{
+  language=elixir,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{elxkw}\bfseries,
+  commentstyle=\color{elxcom}\itshape,
+  stringstyle=\color{elxstr},
+  backgroundcolor=\color{elxbg},
+  frame=single,
+  rulecolor=\color{gray!30},
+  framesep=6pt,
+  breaklines=true,
+  showstringspaces=false,
+  columns=fullflexible,
+  tabsize=2,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  xleftmargin=2em,
+  literate=
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {ñ}{{\~n}}1 {Ñ}{{\~N}}1 {¿}{{?`}}1 {¡}{{!`}}1
+}
+
+% ─── Documento ───────────────────────────────────────────────────────────────
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\Huge\bfseries LudoElixir\par}
+  \vspace{0.6cm}
+  {\Large Documentación Técnica\par}
+  \vspace{0.4cm}
+  {\large Juego de Ludo multijugador en tiempo real\par}
+  \vspace{0.2cm}
+  {\large Elixir~/~Phoenix LiveView~/~OTP\par}
+  \vspace{0.6cm}
+  {\large
+  Víctor Ramos \\[2pt]
+  Albert Cáceres \\[2pt]
+  Daniel Cayo \\[2pt]
+  Juan Callo
+  \par}
+  \vfill
+  \begin{tabular}{rl}
+    \textbf{Lenguaje:}     & Elixir \texttt{\textasciitilde{}> 1.15} (OTP 26+) \\
+    \textbf{Framework web:} & Phoenix \texttt{\textasciitilde{}> 1.8} + LiveView \\
+    \textbf{Concurrencia:}  & Modelo de actores (GenServer, Registry, PubSub) \\
+  \end{tabular}
+  \vfill
+  {\large \today\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Diagrama de la Estructura del Juego}
+
+El sistema se organiza en tres capas claramente separadas: un \textbf{árbol de
+supervisión OTP} que gestiona el ciclo de vida de los procesos, una
+\textbf{capa de lógica pura} sin efectos secundarios que define las reglas
+del juego, y una \textbf{capa de presentación} basada en Phoenix LiveView
+que renderiza el estado en el navegador del jugador mediante WebSockets.
+
+\subsection{Árbol de Supervisión}
+
+El módulo \texttt{Ludo.Application} arranca el supervisor raíz
+\texttt{Ludo.Supervisor} con estrategia \texttt{:one\_for\_one}. Cada hijo
+es responsable de un aspecto independiente del sistema: telemetría,
+descubrimiento de nodos (DNSCluster), bus de mensajes (PubSub), un registro
+de salas, un supervisor dinámico para los procesos de partida y el endpoint
+HTTP/WS de Phoenix.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{supervision_tree.png}
+\caption{Árbol de supervisión OTP.}
+\label{fig:supervision}
+\end{figure}
+
+\noindent
+\textbf{Estrategia \texttt{:one\_for\_one}}: si un \texttt{GameServer} cae
+(por ejemplo, por un error inesperado), solo ese proceso es reiniciado por
+el \texttt{DynamicSupervisor}; las demás salas siguen jugando sin
+interrupción. El estado de la sala caída se pierde (no se persiste a
+disco), pero los demás jugadores no son afectados.
+
+\subsection{Capa de Lógica Pura (\texttt{lib/ludo/})}
+
+Esta capa contiene todo el conocimiento de las reglas del Ludo sin
+acoplarse a procesos, mensajería ni a la web. Cada módulo expone funciones
+puras (idempotentes y sin efectos), lo que hace que sea trivial de testear
+y razonar.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l X}
+\toprule
+\textbf{Módulo} & \textbf{Responsabilidad} \\
+\midrule
+\texttt{Ludo.Estado}   & Struct con \texttt{codigo, host\_id, jugadores, modo, fase, turno\_idx, dado, tablero, fichas\_movibles}. Helpers de avance de turno y finalización. \\
+\texttt{Ludo.Reglas}   & Motor del juego: \texttt{fichas\_movibles/4}, \texttt{aplicar\_movimiento/5}, \texttt{pasos\_de\_movimiento/3}, equipos y victoria. \\
+\texttt{Ludo.Board}    & Geometría del tablero: 52 celdas del camino, 5 celdas por pasillo de llegada, 8 celdas seguras, casillas de salida por color. \\
+\texttt{Ludo.Colores}  & Lista canónica de colores (\texttt{:rojo, :azul, :verde, :amarillo}) y mapa hexadecimal. \\
+\texttt{Ludo.Salas}    & Facade pública: crear, unirse, salir, iniciar partida; valida entradas y genera códigos únicos de sala. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Capa de Presentación (\texttt{lib/ludo\_web/})}
+
+Tres LiveViews cubren todo el ciclo de juego, comunicadas por WebSocket con
+el GenServer de su sala mediante \texttt{Phoenix.PubSub}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l l X}
+\toprule
+\textbf{Ruta} & \textbf{LiveView} & \textbf{Función} \\
+\midrule
+\texttt{GET /}                  & \texttt{InicioLive}   & Landing: crear sala o unirse con código. \\
+\texttt{GET /lobby/:codigo}     & \texttt{LobbyLive}    & Sala de espera; el host inicia la partida. \\
+\texttt{GET /tablero/:codigo}   & \texttt{TableroLive}  & Tablero 15$\times$15 con fichas, dado y turnos. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\noindent
+Tres \textit{hooks} JavaScript (\texttt{assets/js/app.js}) refinan la
+experiencia de cliente:
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \texttt{JugadorSession}: persiste el \texttt{jugador\_id} en
+    \texttt{sessionStorage} para sobrevivir a recargas.
+  \item \texttt{BoardHook}: anima el desplazamiento de fichas paso a paso
+    mediante un \textit{ghost token}.
+  \item \texttt{DiceHook}: anima el dado con rotaciones 3D antes de
+    revelar el resultado real.
+\end{itemize}
+
+\subsection{Flujo de Datos}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{dataflow.png}
+\caption{Flujo de datos: desde el clic del usuario hasta la animación en el navegador.}
+\label{fig:dataflow}
+\end{figure}
+
+\newpage
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Estrategia de Concurrencia}
+
+La concurrencia se apoya en tres pilares de OTP: un \textbf{GenServer}
+por sala (serializa mensajes vía buzón FIFO), \textbf{Phoenix.PubSub}
+para difundir cambios a todos los jugadores, y \textbf{temporizadores}
+(\texttt{Process.send\_after/3}) para timeouts. La siguiente figura
+muestra la interacción entre dos jugadores y el GenServer:
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth]{diagrama_secuencia.png}
+\caption{Diagrama de secuencia: llamadas concurrentes al GenServer.}
+\label{fig:concurrencia}
+\end{figure}
+
+\newpage
+\vspace{-2mm}
+\subsection{Funcionamiento}
+
+\begin{enumerate}[leftmargin=*, itemsep=2pt]
+  \item \textbf{Suscripción}: al montarse, cada LiveView (jugador) se
+    suscribe al topic \texttt{"sala:CODIGO"} de \texttt{Phoenix.PubSub}.
+  \item \textbf{Tirar dado}: el jugador activo envía un
+    \texttt{GenServer.call(:tirar\_dado)}. El GenServer valida el turno,
+    genera 1--6 y calcula las fichas movibles. Luego responde al
+    llamador con \texttt{\{:ok, resultado\}} y \texttt{broadcast}ea el
+    nuevo estado a todos los suscriptores.
+  \item \textbf{Mover ficha}: similar: el jugador envía
+    \texttt{call(:mover\_ficha)}, el GenServer aplica
+    \texttt{Reglas.aplicar\_movimiento/5}, responde y difunde.
+  \item \textbf{Intento simultáneo}: si dos jugadores llaman al mismo
+    tiempo, el buzón FIFO del GenServer serializa las peticiones. El
+    segundo llamador recibe \texttt{\{:error, :no\_es\_tu\_turno\}} porque
+    el turno avanzó tras procesar la primera.
+\end{enumerate}
+
+\subsection{Resumen}
+
+\begin{itemize}[leftmargin=*, itemsep=2pt]
+  \item \textbf{GenServer.call/3} (síncrono): \texttt{tirar\_dado},
+    \texttt{mover\_ficha}, \texttt{iniciar}, \texttt{unirse}.
+  \item \textbf{GenServer.cast/2} (asíncrono): \texttt{salir}.
+  \item \textbf{Process.send\_after/3} (auto-mensaje): timeout de turno
+    (30~s) y auto-pase (2~s).
+  \item \textbf{Phoenix.PubSub}: difusión 1 a N del nuevo estado a todas
+    las LiveViews en paralelo.
+  \item \textbf{Sin locks}: el buzón FIFO del GenServer garantiza
+    exclusión mutua; las funciones de \texttt{Reglas} son puras y no
+    comparten estado.
+\end{itemize}
+
+\newpage
+\section{Definición de las Principales Funciones}
+
+\subsection{\texttt{Ludo.Reglas} --- motor del juego (funciones puras)}
+
+Funciones auxiliares invocadas desde \texttt{aplicar\_movimiento/5}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l X}
+\toprule
+\textbf{Función} & \textbf{Descripción} \\
+\midrule
+\texttt{get\_color/2}        & (privada) Obtiene el \texttt{color} de un jugador a partir de su \texttt{jugador\_id}. \\
+\texttt{nueva\_posicion/3}   & (privada) Calcula la coordenada de destino tras avanzar \texttt{dado} casillas. \\
+\texttt{resolver\_capturas/4} & (privada) Procesa capturas enemigas en la celda de destino, respetando celdas seguras y bloqueos. \\
+\texttt{todas\_en\_meta?/2}  & (privada) Verifica que las 4 fichas del jugador estén en la meta. \\
+\texttt{equipo\_gana?/3}     & Comprueba si el equipo completo del jugador ha ganado (modo \texttt{:equipos}). \\
+\texttt{maybe\_add/3}        & (privada) Agrega un evento a la lista solo si la condición es \texttt{true}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[caption={Esqueleto de \texttt{aplicar\_movimiento/5}}]
+def aplicar_movimiento(tablero, jugador_id, ficha_id, dado, jugadores) do
+  fichas = Map.get(tablero, jugador_id, [])
+
+  case Enum.find(fichas, &(&1.id == ficha_id)) do
+    nil -> {:error, :ficha_no_encontrada}
+
+    ficha ->
+      color      = get_color(jugadores, jugador_id)
+      nueva_pos  = nueva_posicion(ficha.pos, color, dado)
+      tablero2   = actualizar_ficha(tablero, jugador_id, ficha_id, nueva_pos)
+      {tab3, caps} = resolver_capturas(tablero2, jugador_id, nueva_pos, jugadores)
+
+      eventos =
+        []
+        |> maybe_add(:ficha_capturada, caps != [])
+        |> maybe_add(:ficha_en_meta,   nueva_pos == :meta)
+        |> maybe_add(:jugador_gana,    todas_en_meta?(tab3, jugador_id))
+        |> maybe_add(:equipo_gana,     equipo_gana?(tab3, jugadores, jugador_id))
+
+      {:ok, tab3, eventos}
+  end
+end
+\end{lstlisting}
+
+\subsection{\texttt{Ludo.GameServer} --- proceso por sala}
+
+Funciones auxiliares invocadas desde \texttt{tirar\_dado}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l l X}
+\toprule
+\textbf{Función} & \textbf{Tipo} & \textbf{Descripción} \\
+\midrule
+\texttt{tirar\_dado/2}       & call    & API pública que delega al GenServer mediante \texttt{GenServer.call/3}. \\
+\texttt{Reglas.fichas\_movibles/4} & pública & Calcula las fichas que el jugador activo puede mover con el resultado del dado. \\
+\texttt{broadcast!/2}        & (privada) & Difunde un mensaje a todos los suscriptores vía \texttt{Phoenix.PubSub}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[caption={Manejo de \texttt{:tirar\_dado} con validaciones}]
+def handle_call({:tirar_dado, jugador_id}, _from, estado) do
+  jugador_en_turno = Enum.at(estado.jugadores, estado.turno_idx)
+
+  cond do
+    estado.fase != :jugando       -> {:reply, {:error, :partida_no_activa},   estado, @timeout_sala}
+    jugador_en_turno.id != jugador_id -> {:reply, {:error, :no_es_tu_turno},  estado, @timeout_sala}
+    estado.dado != nil            -> {:reply, {:error, :ya_tiraste},          estado, @timeout_sala}
+
+    true ->
+      resultado = Enum.random(1..6)
+      movibles  = Reglas.fichas_movibles(estado.tablero, jugador_id,
+                                          jugador_en_turno.color, resultado)
+      nuevo = %{estado | dado: resultado, fichas_movibles: movibles}
+
+      broadcast!(nuevo.codigo, {:dado_tirado, resultado, jugador_id, nuevo})
+      {:reply, {:ok, resultado}, nuevo, @timeout_sala}
+  end
+end
+\end{lstlisting}
+
+\subsection{\texttt{Ludo.Estado} --- struct y helpers de turno}
+
+\begin{lstlisting}[caption={Helpers de avance de turno}]
+def avanzar_turno(%__MODULE__{} = estado, dado) do
+  n = length(estado.jugadores)
+
+  if dado == 6 and estado.fase == :jugando do
+    %{estado | dado: nil, fichas_movibles: []}
+  else
+    %{estado | dado: nil, fichas_movibles: [],
+               turno_idx: rem(estado.turno_idx + 1, n)}
+  end
+end
+\end{lstlisting}
+
+\subsection{\texttt{Ludo.Board} --- geometría del tablero}
+
+Contiene las constantes del camino de 52 celdas, las coordenadas de cada celda (\texttt{cell\_coords/1}), los pasillos de llegada (\texttt{home\_lane\_coords/1}), las casillas de salida por color (\texttt{casilla\_salida/1}) y el conjunto de 8 celdas seguras (\texttt{celda\_segura?/1}).
+
+\subsection{\texttt{Ludo.Salas} --- API \textit{facade}}
+
+Funciones auxiliares invocadas desde \texttt{crear\_sala/3}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{l X}
+\toprule
+\textbf{Función} & \textbf{Descripción} \\
+\midrule
+\texttt{validar\_modo/1}    & (privada) Rechaza modos distintos a \texttt{:clasico} o \texttt{:equipos}. \\
+\texttt{validar\_color/1}   & (privada) Rechaza colores fuera de \{\texttt{:rojo}, \texttt{:azul}, \texttt{:verde}, \texttt{:amarillo}\}. \\
+\texttt{validar\_nombre/1}  & (privada) Rechaza nombres vacíos o menores a 2 caracteres. \\
+\texttt{codigo\_unico/0}    & (privada) Genera un código de 6 caracteres no existente en el \texttt{Registry}. \\
+\texttt{generar\_id/0}      & (privada) Genera un identificador único hexadecimal de 16 caracteres. \\
+\texttt{arrancar\_game\_server/3} & (privada) Inicia un \texttt{GameServer} hijo del \texttt{DynamicSupervisor}. \\
+\texttt{GameServer.unirse/2} & call & Agrega el jugador a la sala en el GenServer. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[caption={Pipeline de creación de sala con \texttt{with/1}}]
+def crear_sala(nombre_jugador, color, modo \\ :clasico) do
+  with :ok            <- validar_modo(modo),
+       :ok            <- validar_color(color),
+       :ok            <- validar_nombre(nombre_jugador),
+       codigo         <- codigo_unico(),
+       host_id        <- generar_id(),
+       jugador        <- %{id: host_id, nombre: nombre_jugador, color: color},
+       {:ok, _pid}    <- arrancar_game_server(codigo, host_id, modo),
+       {:ok, estado}  <- GameServer.unirse(codigo, jugador) do
+    {:ok, %{codigo: codigo, host_id: host_id, estado: estado}}
+  end
+end
+\end{lstlisting}
+
+\end{document}

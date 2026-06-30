@@ -1,0 +1,37 @@
+@startuml Concurrente
+
+skinparam participantBorderColor #2E86C1
+skinparam participantBackgroundColor #D6EAF8
+skinparam lifeLineBorderColor #2E86C1
+
+participant "Jugador A" as A
+participant "GameServer\n(GenServer)" as GS
+participant "Jugador B" as B
+
+== Turno de A ==
+
+A -> GS++ : GenServer.call\n{:tirar_dado, id_A}
+
+note over GS : Procesa\nsecuencialmente\n(buzón FIFO)
+
+GS -> A : {:ok, resultado}
+GS -> B : broadcast\n{:dado_tirado,\n resultado, id_A,\n estado}
+
+note over A, B : Todos reciben\nel mismo broadcast
+
+A -> GS++ : GenServer.call\n{:mover_ficha,\n id_A, ficha_id}
+
+GS -> A : {:ok, nuevo}
+GS -> B : broadcast\n{:ficha_movida,\n nuevo_estado,\n eventos}
+
+== Intento simultáneo (A y B llaman a la vez) ==
+
+A -> GS++ : call(:tirar_dado)
+B -> GS++ : call(:tirar_dado)
+
+note over GS : Buzón FIFO:\nprimero A, luego B.\nEl segundo ve el\nestado del primero.
+
+GS -> A : {:error, :no_es_tu_turno}
+GS -> B : {:ok, resultado}
+
+@enduml

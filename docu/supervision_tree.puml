@@ -1,0 +1,58 @@
+@startuml SupervisionTree
+skinparam backgroundColor #FAFBFC
+skinparam componentStyle rectangle
+skinparam defaultFontName Helvetica
+skinparam defaultFontSize 10
+skinparam arrowColor #5B7E9E
+skinparam arrowThickness 2
+
+title Árbol de Supervisión - LudoElixir
+
+package "BEAM Virtual Machine" as beam #DDE8F0 {
+
+  component "Ludo.Supervisor\n:one_for_one" as root #4A90D9
+  note right of root
+    Supervisor raíz.
+    Si un hijo cae,
+    solo ese se reinicia.
+  end note
+
+  component "LudoWeb.Telemetry" as tel #85C1E9
+  component "DNSCluster" as dns #85C1E9
+  component "Phoenix.PubSub\nLudo.PubSub" as pub #85C1E9
+  component "Registry\nLudo.SalaRegistry" as reg #85C1E9
+  component "DynamicSupervisor\nLudo.SalaSupervisor" as sup #F5B041
+  component "LudoWeb.Endpoint" as ep #85C1E9
+
+  component "GameServer\nsala ABC123" as gs1 #F0B27A
+  component "GameServer\nsala XYZ789" as gs2 #F0B27A
+  component "..." as gsn #F0B27A
+
+  package "Clientes (LiveViews)" as clients #D5F5E3 {
+    component "LiveView\nJugador A" as lv1
+    component "LiveView\nJugador B" as lv2
+    component "LiveView\nJugador C" as lv3
+    component "LiveView\nJugador D" as lv4
+  }
+}
+
+root --> tel : hijo
+root --> dns : hijo
+root --> pub : hijo
+root --> reg : hijo
+root --> sup : hijo
+root --> ep : hijo
+
+sup --> gs1 : inicia
+sup --> gs2 : inicia
+sup --> gsn : inicia
+
+pub --> lv1 : suscribe
+pub --> lv2 : suscribe
+pub --> lv3 : suscribe
+pub --> lv4 : suscribe
+
+gs1 --> pub : broadcast
+gs2 --> pub : broadcast
+
+@enduml
