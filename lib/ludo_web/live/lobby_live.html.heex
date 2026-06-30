@@ -7,42 +7,64 @@
     style="background-color: #0a1f3a;"
   >
     <%!-- Foto de fondo  --%>
-    <div class="pointer-events-none absolute inset-0"
-          style="background-image: url('/images/fondo.avif'); background-size: cover; background-position: center; filter: blur(5px); transform: scale(1.06);"></div>
+    <div
+      class="pointer-events-none absolute inset-0"
+      style="background-image: url('/images/fondo.avif'); background-size: cover; background-position: center; filter: blur(5px); transform: scale(1.06);"
+    >
+    </div>
 
     <%!-- Halos de luz azul y violeta en las esquinas  --%>
     <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div class="absolute -left-28 -top-28 h-[55vh] w-[55vh]"
-            style="background: radial-gradient(circle, rgba(147,197,253,0.20) 0%, transparent 65%); filter: blur(72px);"></div>
-      <div class="absolute -bottom-28 -right-28 h-[55vh] w-[55vh]"
-            style="background: radial-gradient(circle, rgba(196,181,253,0.20) 0%, transparent 65%); filter: blur(72px);"></div>
+      <div
+        class="absolute -left-28 -top-28 h-[55vh] w-[55vh]"
+        style="background: radial-gradient(circle, rgba(147,197,253,0.20) 0%, transparent 65%); filter: blur(72px);"
+      >
+      </div>
+      <div
+        class="absolute -bottom-28 -right-28 h-[55vh] w-[55vh]"
+        style="background: radial-gradient(circle, rgba(196,181,253,0.20) 0%, transparent 65%); filter: blur(72px);"
+      >
+      </div>
     </div>
 
     <%!-- Panel principal de  la sala de espera --%>
-    <div class="page-emerge relative z-10 w-full max-w-5xl rounded-[2rem] p-6 sm:p-8"
-          style="background: rgba(255,255,255,0.28); backdrop-filter: blur(30px); border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 8px 40px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.12);">
-
+    <div
+      class="page-emerge relative z-10 w-full max-w-5xl rounded-[2rem] p-6 sm:p-8"
+      style="background: rgba(255,255,255,0.28); backdrop-filter: blur(30px); border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 8px 40px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.12);"
+    >
       <%!-- Cabecera con el nombre de la sala y el boton para salir --%>
       <header class="mb-7 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="setup-enter setup-delay-1 text-[0.65rem] font-semibold uppercase tracking-widest text-white/50">
             Lobby
           </p>
-          <h1 class="setup-enter setup-delay-2 mt-1 text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
-              style="font-family:'Syne',sans-serif;">
-            Sala <span style="background: linear-gradient(135deg,#93c5fd,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">{@codigo}</span>
+          <h1
+            class="setup-enter setup-delay-2 mt-1 text-4xl font-extrabold tracking-tight text-white sm:text-5xl"
+            style="font-family:'Syne',sans-serif;"
+          >
+            Sala
+            <span style="background: linear-gradient(135deg,#93c5fd,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">
+              {@codigo}
+            </span>
           </h1>
         </div>
 
         <%!-- Contador de jugadores conectados y boton de salida --%>
         <div class="setup-enter setup-delay-2 flex items-center gap-3">
-          <div class="rounded-full px-4 py-2 text-sm font-bold text-white/80"
-                style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);">
+          <div
+            class="rounded-full px-4 py-2 text-sm font-bold text-white/80"
+            style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22);"
+          >
             {length(@estado.jugadores)} / 4 jugadores
           </div>
-          <button id="lobby-salir" type="button" phx-click="salir_sala"
+          <button
+            id="lobby-salir"
+            type="button"
+            phx-click="salir_sala"
             class="flex h-11 w-11 items-center justify-center rounded-xl text-white/60 transition-all hover:text-white active:scale-[0.97]"
-            style="background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);" aria-label="Salir">
+            style="background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);"
+            aria-label="Salir"
+          >
             <.icon name="hero-arrow-right-start-on-rectangle" class="size-5" />
           </button>
         </div>
@@ -50,60 +72,67 @@
 
       <%!-- Grid de dos columnas: lista de jugadores a la izquierda, codigo y acciones a la derecha --%>
       <div class="grid gap-6 lg:grid-cols-[1fr_22rem]">
-
         <%!-- Panel izquierdo: tarjetas de los jugadores que ya se unieron y espacios vacios --%>
-        <div class="setup-enter setup-delay-3 rounded-[1.5rem] p-5 sm:p-6"
-              style="background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.32);">
+        <div
+          class="setup-enter setup-delay-3 rounded-[1.5rem] p-5 sm:p-6"
+          style="background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.32);"
+        >
           <div class="mb-5 flex items-center justify-between gap-4">
             <div>
-              <h2 class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
-                  style="font-family:'Syne',sans-serif;">
+              <h2
+                class="text-2xl font-extrabold tracking-tight text-white sm:text-3xl"
+                style="font-family:'Syne',sans-serif;"
+              >
                 Jugadores
               </h2>
               <p class="mt-1 text-sm text-white/45">Esperando a que la mesa se complete.</p>
             </div>
             <%!-- Muestra la fase actual de la sala (esperando, iniciando, etc.) --%>
-            <span class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/70"
-                  style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.20);">
+            <span
+              class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/70"
+              style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.20);"
+            >
               {@estado.fase}
             </span>
           </div>
 
           <%!-- Lista dinamica: una tarjeta por jugador conectado --%>
           <div id="lobby-jugadores" class="grid gap-3 sm:grid-cols-2">
-            <%= for jugador <- @estado.jugadores do %>
-              <div id={"lobby-jugador-#{jugador.id}"}
-                    class="rounded-2xl px-5 py-4 transition-all duration-200"
-                    style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.35);">
-                <div class="flex items-center gap-4">
-                  <%!-- Avatar con la primera letra del nombre en el color del jugador --%>
-                  <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-extrabold text-white"
-                        style={"background-color: #{Map.fetch!(@color_hex, jugador.color)}; box-shadow: 0 4px 14px rgba(0,0,0,0.35);"}>
-                    {String.first(jugador.nombre) |> String.upcase()}
-                  </span>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2">
-                      <p class="truncate text-base font-extrabold text-white">
-                        {jugador.nombre}
-                      </p>
-                      <%!-- Estrella dorada solo para el anfitrion de la sala --%>
-                      <.icon :if={jugador.id == @estado.host_id}
-                              name="hero-star-solid" class="size-4 shrink-0 text-amber-400" />
-                    </div>
-                    <p class="text-sm font-semibold capitalize text-white/45">
-                      {Atom.to_string(jugador.color)}
-                    </p>
-                  </div>
-                </div>
+            <%= if @estado.modo == :equipos do %>
+              <% equipo_a = Enum.filter(@estado.jugadores, &(&1.color in [:rojo, :amarillo])) %>
+              <% equipo_b = Enum.filter(@estado.jugadores, &(&1.color in [:azul, :verde])) %>
+              <div
+                class="sm:col-span-2 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest text-rose-300/70"
+                style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);"
+              >
+                Equipo A — Rojo & Amarillo
               </div>
+              <%= for jugador <- equipo_a do %>
+                {render_jugador_card(jugador, @estado.host_id, @color_hex)}
+              <% end %>
+              <div
+                class="sm:col-span-2 rounded-xl px-4 py-2 text-xs font-bold uppercase tracking-widest text-blue-300/70"
+                style="background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);"
+              >
+                Equipo B — Azul & Verde
+              </div>
+              <%= for jugador <- equipo_b do %>
+                {render_jugador_card(jugador, @estado.host_id, @color_hex)}
+              <% end %>
+            <% else %>
+              <%= for jugador <- @estado.jugadores do %>
+                {render_jugador_card(jugador, @estado.host_id, @color_hex)}
+              <% end %>
             <% end %>
 
             <%!-- Espacios vacios con borde punteado para los cupos que faltan --%>
             <%= if length(@estado.jugadores) < 4 do %>
               <%= for idx <- (length(@estado.jugadores) + 1)..4 do %>
-                <div id={"lobby-vacio-#{idx}"}
-                      class="grid min-h-24 place-items-center rounded-2xl text-sm font-semibold text-white/30"
-                      style="border: 1.5px dashed rgba(255,255,255,0.18); background: rgba(255,255,255,0.04);">
+                <div
+                  id={"lobby-vacio-#{idx}"}
+                  class="grid min-h-24 place-items-center rounded-2xl text-sm font-semibold text-white/30"
+                  style="border: 1.5px dashed rgba(255,255,255,0.18); background: rgba(255,255,255,0.04);"
+                >
                   Espacio libre
                 </div>
               <% end %>
@@ -112,14 +141,18 @@
         </div>
 
         <%!-- Panel derecho: codigo para compartir con amigos y boton de inicio --%>
-        <aside class="setup-enter setup-delay-4 rounded-[1.5rem] p-5 sm:p-6"
-                style="background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.32);">
+        <aside
+          class="setup-enter setup-delay-4 rounded-[1.5rem] p-5 sm:p-6"
+          style="background: rgba(255,255,255,0.20); border: 1px solid rgba(255,255,255,0.32);"
+        >
           <p class="text-[0.65rem] font-semibold uppercase tracking-widest text-white/50">
             Codigo de sala
           </p>
           <%!-- Codigo grande centrado para que sea facil de leer y compartir --%>
-          <div class="mt-3 rounded-2xl px-4 py-5 text-center font-extrabold text-white"
-                style="background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.45); font-family:'Syne',sans-serif; font-size: clamp(1.5rem,5vw,2.5rem); letter-spacing: 0.3em; box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);">
+          <div
+            class="mt-3 rounded-2xl px-4 py-5 text-center font-extrabold text-white"
+            style="background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.45); font-family:'Syne',sans-serif; font-size: clamp(1.5rem,5vw,2.5rem); letter-spacing: 0.3em; box-shadow: inset 0 2px 8px rgba(0,0,0,0.20);"
+          >
             {@codigo}
           </div>
 
@@ -129,7 +162,10 @@
 
           <div class="mt-5 space-y-3">
             <%!-- Solo el anfitrion puede iniciar, y solo cuando hay al menos 2 jugadores --%>
-            <button id="lobby-iniciar" type="button" phx-click="iniciar_partida"
+            <button
+              id="lobby-iniciar"
+              type="button"
+              phx-click="iniciar_partida"
               disabled={!es_host?(@estado, @jugador_id) || !puede_iniciar?(@estado)}
               class={[
                 "flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold transition-all",
@@ -138,9 +174,14 @@
                 (!es_host?(@estado, @jugador_id) || !puede_iniciar?(@estado)) &&
                   "cursor-not-allowed text-white/30"
               ]}
-              style={if es_host?(@estado, @jugador_id) && puede_iniciar?(@estado),
-                do: "background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.38); box-shadow: 0 6px 20px rgba(0,0,0,0.30); font-family:'Syne',sans-serif;",
-                else: "background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); font-family:'Syne',sans-serif;"}>
+              style={
+                if es_host?(@estado, @jugador_id) && puede_iniciar?(@estado),
+                  do:
+                    "background: rgba(255,255,255,0.22); border: 1.5px solid rgba(255,255,255,0.38); box-shadow: 0 6px 20px rgba(0,0,0,0.30); font-family:'Syne',sans-serif;",
+                  else:
+                    "background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); font-family:'Syne',sans-serif;"
+              }
+            >
               <.icon name="hero-play-solid" class="size-5" /> Iniciar partida
             </button>
 
@@ -159,6 +200,5 @@
         </aside>
       </div>
     </div>
-
   </section>
 </Layouts.app>

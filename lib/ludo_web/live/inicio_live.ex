@@ -7,6 +7,7 @@ defmodule LudoWeb.InicioLive do
       socket
       |> assign(
         modo: nil,
+        game_mode: :clasico,
         nombre: "",
         color: nil,
         codigo_entrada: "",
@@ -30,16 +31,21 @@ defmodule LudoWeb.InicioLive do
 
   def handle_event("change_nombre", %{"value" => val}, socket) do
     {:noreply,
-      socket
-      |> assign(nombre: val, error: nil)
-      |> assign_inicio_form()}
+     socket
+     |> assign(nombre: val, error: nil)
+     |> assign_inicio_form()}
   end
 
   def handle_event("change_codigo", %{"value" => val}, socket) do
     {:noreply,
-      socket
-      |> assign(codigo_entrada: String.upcase(val), error: nil)
-      |> assign_inicio_form()}
+     socket
+     |> assign(codigo_entrada: String.upcase(val), error: nil)
+     |> assign_inicio_form()}
+  end
+
+  def handle_event("change_game_mode", %{"game_mode" => mode}, socket) do
+    mode_atom = String.to_existing_atom(mode)
+    {:noreply, assign(socket, game_mode: mode_atom, error: nil)}
   end
 
   def handle_event("change_color", %{"color" => color}, socket) do
@@ -54,10 +60,10 @@ defmodule LudoWeb.InicioLive do
 
   def handle_event("actualizar_form", params, socket) do
     {:noreply,
-      socket
-      |> assign_form_params(params)
-      |> assign(error: nil)
-      |> assign_inicio_form()}
+     socket
+     |> assign_form_params(params)
+     |> assign(error: nil)
+     |> assign_inicio_form()}
   end
 
   def handle_event("crear_sala", params, socket) do
@@ -66,12 +72,16 @@ defmodule LudoWeb.InicioLive do
       |> assign_form_params(params)
       |> assign_inicio_form()
 
-    case Ludo.Salas.crear_sala(socket.assigns.nombre, socket.assigns.color) do
+    case Ludo.Salas.crear_sala(
+           socket.assigns.nombre,
+           socket.assigns.color,
+           socket.assigns.game_mode
+         ) do
       {:ok, %{codigo: codigo, host_id: host_id}} ->
         {:noreply,
-          socket
-          |> push_event("set_jugador_id", %{jugador_id: host_id, codigo: codigo})
-          |> push_navigate(to: ~p"/lobby/#{codigo}")}
+         socket
+         |> push_event("set_jugador_id", %{jugador_id: host_id, codigo: codigo})
+         |> push_navigate(to: ~p"/lobby/#{codigo}")}
 
       {:error, razon} ->
         {:noreply, assign(socket, error: traducir_error(razon))}
@@ -89,9 +99,9 @@ defmodule LudoWeb.InicioLive do
     case Ludo.Salas.unirse_sala(codigo, nombre, color) do
       {:ok, %{jugador_id: jugador_id}} ->
         {:noreply,
-          socket
-          |> push_event("set_jugador_id", %{jugador_id: jugador_id, codigo: codigo})
-          |> push_navigate(to: ~p"/lobby/#{codigo}")}
+         socket
+         |> push_event("set_jugador_id", %{jugador_id: jugador_id, codigo: codigo})
+         |> push_navigate(to: ~p"/lobby/#{codigo}")}
 
       {:error, razon} ->
         {:noreply, assign(socket, error: traducir_error(razon))}

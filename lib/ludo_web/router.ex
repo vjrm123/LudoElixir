@@ -13,19 +13,18 @@ defmodule LudoWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
   end
-  
+
   scope "/", LudoWeb do
     pipe_through :browser
 
     live_session :ludo do
-      live "/",                InicioLive,   :index
-      live "/lobby/:codigo",   LobbyLive,    :index
-      live "/tablero/:codigo", TableroLive,  :index
+      live "/", InicioLive, :index
+      live "/lobby/:codigo", LobbyLive, :index
+      live "/tablero/:codigo", TableroLive, :index
     end
   end
 
   if Application.compile_env(:ludo, :dev_routes) do
-
     import Phoenix.LiveDashboard.Router
 
     scope "/dev" do

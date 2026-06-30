@@ -6,34 +6,65 @@
     style="background-color: #0a1f3a;"
   >
     <%!-- Fondo  --%>
-    <div class="pointer-events-none absolute inset-0"
-          style="background-image: url('/images/fondo.avif'); background-size: cover; background-position: center; filter: blur(5px); transform: scale(1.06);"></div>
+    <div
+      class="pointer-events-none absolute inset-0"
+      style="background-image: url('/images/fondo.avif'); background-size: cover; background-position: center; filter: blur(5px); transform: scale(1.06);"
+    >
+    </div>
 
     <%!-- Luces ambientes --%>
     <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div class="absolute -left-28 -top-28 h-[55vh] w-[55vh]"
-            style="background: radial-gradient(circle, rgba(147,197,253,0.22) 0%, transparent 65%); filter: blur(72px);"></div>
-      <div class="absolute -bottom-28 -right-28 h-[55vh] w-[55vh]"
-            style="background: radial-gradient(circle, rgba(196,181,253,0.22) 0%, transparent 65%); filter: blur(72px);"></div>
+      <div
+        class="absolute -left-28 -top-28 h-[55vh] w-[55vh]"
+        style="background: radial-gradient(circle, rgba(147,197,253,0.22) 0%, transparent 65%); filter: blur(72px);"
+      >
+      </div>
+      <div
+        class="absolute -bottom-28 -right-28 h-[55vh] w-[55vh]"
+        style="background: radial-gradient(circle, rgba(196,181,253,0.22) 0%, transparent 65%); filter: blur(72px);"
+      >
+      </div>
     </div>
 
     <%!-- ══ HERO STATE --%>
-    <div :if={is_nil(@modo)} id="inicio-hero" class="page-emerge relative z-10 flex flex-col items-center text-center px-4">
-
+    <div
+      :if={is_nil(@modo)}
+      id="inicio-hero"
+      class="page-emerge relative z-10 flex flex-col items-center text-center px-4"
+    >
       <div class="setup-enter mb-6">
-        <svg viewBox="0 0 220 220" width="180" height="180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg
+          viewBox="0 0 220 220"
+          width="180"
+          height="180"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
+        >
           <defs>
             <radialGradient id="ig-r" cx="36%" cy="28%" r="64%" gradientUnits="objectBoundingBox">
-              <stop offset="0%" stop-color="#fca5a5" /><stop offset="45%" stop-color="#ef4444" /><stop offset="100%" stop-color="#991b1b" />
+              <stop offset="0%" stop-color="#fca5a5" /><stop offset="45%" stop-color="#ef4444" /><stop
+                offset="100%"
+                stop-color="#991b1b"
+              />
             </radialGradient>
             <radialGradient id="ig-b" cx="36%" cy="28%" r="64%" gradientUnits="objectBoundingBox">
-              <stop offset="0%" stop-color="#bfdbfe" /><stop offset="45%" stop-color="#3b82f6" /><stop offset="100%" stop-color="#1d4ed8" />
+              <stop offset="0%" stop-color="#bfdbfe" /><stop offset="45%" stop-color="#3b82f6" /><stop
+                offset="100%"
+                stop-color="#1d4ed8"
+              />
             </radialGradient>
             <radialGradient id="ig-g" cx="36%" cy="28%" r="64%" gradientUnits="objectBoundingBox">
-              <stop offset="0%" stop-color="#a7f3d0" /><stop offset="45%" stop-color="#10b981" /><stop offset="100%" stop-color="#065f46" />
+              <stop offset="0%" stop-color="#a7f3d0" /><stop offset="45%" stop-color="#10b981" /><stop
+                offset="100%"
+                stop-color="#065f46"
+              />
             </radialGradient>
             <radialGradient id="ig-y" cx="36%" cy="28%" r="64%" gradientUnits="objectBoundingBox">
-              <stop offset="0%" stop-color="#fef3c7" /><stop offset="45%" stop-color="#f59e0b" /><stop offset="100%" stop-color="#92400e" />
+              <stop offset="0%" stop-color="#fef3c7" /><stop offset="45%" stop-color="#f59e0b" /><stop
+                offset="100%"
+                stop-color="#92400e"
+              />
             </radialGradient>
             <filter id="ig-ps" x="-40%" y="-40%" width="180%" height="180%">
               <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="rgba(0,0,0,0.35)" />
@@ -42,14 +73,66 @@
               <feDropShadow dx="0" dy="4" stdDeviation="9" flood-color="rgba(255,255,255,0.15)" />
             </filter>
           </defs>
-          <line x1="66" y1="66" x2="86" y2="86" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="4 3" />
-          <line x1="154" y1="66" x2="134" y2="86" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="4 3" />
-          <line x1="66" y1="154" x2="86" y2="134" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="4 3" />
-          <line x1="154" y1="154" x2="134" y2="134" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="4 3" />
-          <rect x="77" y="77" width="66" height="66" rx="14" fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" filter="url(#ig-ds)" />
-          <circle cx="96" cy="96" r="4.5" fill="white" /><circle cx="124" cy="96" r="4.5" fill="white" />
+          <line
+            x1="66"
+            y1="66"
+            x2="86"
+            y2="86"
+            stroke="rgba(255,255,255,0.25)"
+            stroke-width="1.5"
+            stroke-dasharray="4 3"
+          />
+          <line
+            x1="154"
+            y1="66"
+            x2="134"
+            y2="86"
+            stroke="rgba(255,255,255,0.25)"
+            stroke-width="1.5"
+            stroke-dasharray="4 3"
+          />
+          <line
+            x1="66"
+            y1="154"
+            x2="86"
+            y2="134"
+            stroke="rgba(255,255,255,0.25)"
+            stroke-width="1.5"
+            stroke-dasharray="4 3"
+          />
+          <line
+            x1="154"
+            y1="154"
+            x2="134"
+            y2="134"
+            stroke="rgba(255,255,255,0.25)"
+            stroke-width="1.5"
+            stroke-dasharray="4 3"
+          />
+          <rect
+            x="77"
+            y="77"
+            width="66"
+            height="66"
+            rx="14"
+            fill="rgba(255,255,255,0.18)"
+            stroke="rgba(255,255,255,0.35)"
+            stroke-width="1.5"
+            filter="url(#ig-ds)"
+          />
+          <circle cx="96" cy="96" r="4.5" fill="white" /><circle
+            cx="124"
+            cy="96"
+            r="4.5"
+            fill="white"
+          />
           <circle cx="110" cy="110" r="4.5" fill="white" />
-          <circle cx="96" cy="124" r="4.5" fill="white" /><circle cx="124" cy="124" r="4.5" fill="white" />
+          <circle cx="96" cy="124" r="4.5" fill="white" /><circle
+            cx="124"
+            cy="124"
+            r="4.5"
+            fill="white"
+          />
           <circle cx="44" cy="44" r="28" fill="url(#ig-r)" filter="url(#ig-ps)" />
           <circle cx="36" cy="37" r="8" fill="rgba(255,255,255,0.28)" />
           <circle cx="176" cy="44" r="28" fill="url(#ig-b)" filter="url(#ig-ps)" />
@@ -61,8 +144,10 @@
         </svg>
       </div>
 
-      <h1 class="setup-enter setup-delay-1 font-black tracking-tight"
-          style="font-family:'Syne',sans-serif; font-size: clamp(5rem,18vw,9rem); line-height: 0.93; background: linear-gradient(135deg, #93c5fd 0%, #c4b5fd 55%, #f9a8d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent;">
+      <h1
+        class="setup-enter setup-delay-1 font-black tracking-tight"
+        style="font-family:'Syne',sans-serif; font-size: clamp(5rem,18vw,9rem); line-height: 0.93; background: linear-gradient(135deg, #93c5fd 0%, #c4b5fd 55%, #f9a8d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent;"
+      >
         LUDO
       </h1>
 
@@ -71,19 +156,43 @@
       </p>
 
       <div class="setup-enter setup-delay-3 mt-10 flex w-full max-w-xs flex-col gap-3 sm:flex-row sm:max-w-sm">
-        <button id="inicio-modo-crear" type="button" phx-click="modo_crear"
+        <button
+          id="inicio-modo-crear"
+          type="button"
+          phx-click="modo_crear"
           class="flex flex-1 items-center justify-center gap-2.5 rounded-2xl px-7 py-4 text-[0.95rem] font-bold text-white transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
-          style="background: rgba(255,255,255,0.22); backdrop-filter: blur(16px); border: 1.5px solid rgba(255,255,255,0.40); box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-family:'Syne',sans-serif;">
-          <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          style="background: rgba(255,255,255,0.22); backdrop-filter: blur(16px); border: 1.5px solid rgba(255,255,255,0.40); box-shadow: 0 8px 24px rgba(0,0,0,0.25); font-family:'Syne',sans-serif;"
+        >
+          <svg
+            class="size-5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
           Crear sala
         </button>
-        <button id="inicio-modo-unirse" type="button" phx-click="modo_unirse"
+        <button
+          id="inicio-modo-unirse"
+          type="button"
+          phx-click="modo_unirse"
           class="flex flex-1 items-center justify-center gap-2.5 rounded-2xl px-7 py-4 text-[0.95rem] font-bold text-white/80 transition-all duration-200 hover:-translate-y-0.5 hover:text-white active:scale-[0.97]"
-          style="background: rgba(255,255,255,0.10); backdrop-filter: blur(16px); border: 1.5px solid rgba(255,255,255,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.18); font-family:'Syne',sans-serif;">
-          <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+          style="background: rgba(255,255,255,0.10); backdrop-filter: blur(16px); border: 1.5px solid rgba(255,255,255,0.22); box-shadow: 0 4px 14px rgba(0,0,0,0.18); font-family:'Syne',sans-serif;"
+        >
+          <svg
+            class="size-5 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+            />
           </svg>
           Unirse
         </button>
@@ -91,61 +200,161 @@
     </div>
 
     <%!-- ══ FORM STATE --%>
-    <div :if={@modo} id="inicio-form" class="page-emerge relative z-10 flex w-full max-w-md flex-col items-center gap-5 px-4">
-
+    <div
+      :if={@modo}
+      id="inicio-form"
+      class="page-emerge relative z-10 flex w-full max-w-md flex-col items-center gap-5 px-4"
+    >
       <div class="setup-enter">
-        <h1 class="font-black tracking-tight text-4xl sm:text-5xl"
-            style="font-family:'Syne',sans-serif; line-height:1; background: linear-gradient(135deg,#93c5fd,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; color:transparent;">
+        <h1
+          class="font-black tracking-tight text-4xl sm:text-5xl"
+          style="font-family:'Syne',sans-serif; line-height:1; background: linear-gradient(135deg,#93c5fd,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; color:transparent;"
+        >
           LUDO
         </h1>
       </div>
 
-      <div class="setup-enter setup-delay-1 w-full rounded-3xl p-6 sm:p-8"
-            style="background: rgba(255,255,255,0.28); backdrop-filter: blur(28px); border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12);">
-
+      <div
+        class="setup-enter setup-delay-1 w-full rounded-3xl p-6 sm:p-8"
+        style="background: rgba(255,255,255,0.28); backdrop-filter: blur(28px); border: 1.5px solid rgba(255,255,255,0.45); box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.12);"
+      >
         <div class="mb-6 flex items-start justify-between gap-4">
           <div>
             <p class="text-[0.62rem] font-bold uppercase tracking-[0.18em] text-white/50">
               {if @modo == :crear, do: "Nueva sala", else: "Unirse a sala"}
             </p>
-            <h2 class="mt-1 text-2xl font-extrabold text-white sm:text-[1.7rem]"
-                style="font-family:'Syne',sans-serif;">
+            <h2
+              class="mt-1 text-2xl font-extrabold text-white sm:text-[1.7rem]"
+              style="font-family:'Syne',sans-serif;"
+            >
               {if @modo == :crear, do: "¡Crea tu sala!", else: "Entra al juego"}
             </h2>
           </div>
-          <button id="inicio-volver" type="button" phx-click="volver"
+          <button
+            id="inicio-volver"
+            type="button"
+            phx-click="volver"
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white/60 transition-all hover:text-white active:scale-[0.95]"
-            style="background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);" aria-label="Volver">
-            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+            style="background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);"
+            aria-label="Volver"
+          >
+            <svg
+              class="size-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+              />
             </svg>
           </button>
         </div>
 
-        <.form for={@form} id="inicio-player-form" phx-change="actualizar_form"
-          phx-submit={if(@modo == :crear, do: "crear_sala", else: "unirse_sala")} class="space-y-4">
+        <.form
+          for={@form}
+          id="inicio-player-form"
+          phx-change="actualizar_form"
+          phx-submit={if(@modo == :crear, do: "crear_sala", else: "unirse_sala")}
+          class="space-y-4"
+        >
           <div>
-            <label for="inicio-nombre-input"
-              class="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50">
+            <label
+              for="inicio-nombre-input"
+              class="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50"
+            >
               Tu nombre
             </label>
-            <input type="text" id="inicio-nombre-input" name="inicio[nombre]" value={@form[:nombre].value}
-              placeholder="escribe tu nombre" phx-keyup="change_nombre" autocomplete="off"
+            <input
+              type="text"
+              id="inicio-nombre-input"
+              name="inicio[nombre]"
+              value={@form[:nombre].value}
+              placeholder="escribe tu nombre"
+              phx-keyup="change_nombre"
+              autocomplete="off"
               class="glass-input w-full rounded-xl px-4 py-3 text-sm font-semibold text-white outline-none transition-all"
-              style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35);" />
+              style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35);"
+            />
           </div>
 
           <div :if={@modo == :unirse}>
-            <label for="inicio-codigo-input"
-              class="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50">
+            <label
+              for="inicio-codigo-input"
+              class="mb-1.5 block text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50"
+            >
               Codigo de sala
             </label>
-            <input type="text" id="inicio-codigo-input" name="inicio[codigo]" value={@form[:codigo].value}
-              placeholder="ABC123" phx-keyup="change_codigo" maxlength="6" autocomplete="off"
+            <input
+              type="text"
+              id="inicio-codigo-input"
+              name="inicio[codigo]"
+              value={@form[:codigo].value}
+              placeholder="ABC123"
+              phx-keyup="change_codigo"
+              maxlength="6"
+              autocomplete="off"
               class="glass-input w-full rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-[0.22em] text-white outline-none transition-all"
-              style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35);" />
+              style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35);"
+            />
           </div>
         </.form>
+
+        <div :if={@modo == :crear} class="mt-5">
+          <p class="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50">
+            Modo de juego
+          </p>
+          <div class="flex gap-2.5">
+            <button
+              type="button"
+              phx-click="change_game_mode"
+              phx-value-game_mode="clasico"
+              class={[
+                "flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all",
+                if(@game_mode == :clasico,
+                  do: "text-white shadow-md",
+                  else: "text-white/40"
+                )
+              ]}
+              style={
+                if @game_mode == :clasico,
+                  do:
+                    "background: rgba(255,255,255,0.30); border: 1.5px solid rgba(255,255,255,0.55);",
+                  else:
+                    "background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);"
+              }
+            >
+              Clásico
+            </button>
+            <button
+              type="button"
+              phx-click="change_game_mode"
+              phx-value-game_mode="equipos"
+              class={[
+                "flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all",
+                if(@game_mode == :equipos,
+                  do: "text-white shadow-md",
+                  else: "text-white/40"
+                )
+              ]}
+              style={
+                if @game_mode == :equipos,
+                  do:
+                    "background: rgba(255,255,255,0.30); border: 1.5px solid rgba(255,255,255,0.55);",
+                  else:
+                    "background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.20);"
+              }
+            >
+              Equipos
+            </button>
+          </div>
+          <p :if={@game_mode == :equipos} class="mt-2 text-xs text-white/45">
+            Rojo + Amarillo vs Azul + Verde
+          </p>
+        </div>
 
         <div class="mt-5">
           <p class="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/50">
@@ -153,22 +362,44 @@
           </p>
           <div class="grid grid-cols-4 gap-2.5">
             <%= for color <- @colores do %>
-              <%
-                {sphere_grad, nombre_color} = case color do
-                  :rojo     -> {"radial-gradient(circle at 36% 28%, #fca5a5 0%, #ef4444 45%, #991b1b 100%)", "Rojo"}
-                  :azul     -> {"radial-gradient(circle at 36% 28%, #bfdbfe 0%, #3b82f6 45%, #1d4ed8 100%)", "Azul"}
-                  :verde    -> {"radial-gradient(circle at 36% 28%, #a7f3d0 0%, #10b981 45%, #065f46 100%)", "Verde"}
-                  :amarillo -> {"radial-gradient(circle at 36% 28%, #fef3c7 0%, #f59e0b 45%, #92400e 100%)", "Amarillo"}
-                end
-              %>
-              <button id={"inicio-color-#{color}"} type="button" phx-click="change_color"
-                phx-value-color={Atom.to_string(color)} data-color={Atom.to_string(color)}
+              <% {sphere_grad, nombre_color} =
+                case color do
+                  :rojo ->
+                    {"radial-gradient(circle at 36% 28%, #fca5a5 0%, #ef4444 45%, #991b1b 100%)",
+                     "Rojo"}
+
+                  :azul ->
+                    {"radial-gradient(circle at 36% 28%, #bfdbfe 0%, #3b82f6 45%, #1d4ed8 100%)",
+                     "Azul"}
+
+                  :verde ->
+                    {"radial-gradient(circle at 36% 28%, #a7f3d0 0%, #10b981 45%, #065f46 100%)",
+                     "Verde"}
+
+                  :amarillo ->
+                    {"radial-gradient(circle at 36% 28%, #fef3c7 0%, #f59e0b 45%, #92400e 100%)",
+                     "Amarillo"}
+                end %>
+              <button
+                id={"inicio-color-#{color}"}
+                type="button"
+                phx-click="change_color"
+                phx-value-color={Atom.to_string(color)}
+                data-color={Atom.to_string(color)}
                 class="flex flex-col items-center gap-1.5 rounded-2xl border py-3 transition-all duration-150"
-                style={if @color == color,
-                  do: "background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.65); box-shadow: 0 4px 16px rgba(0,0,0,0.25);",
-                  else: "background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.32);"}>
-                <div class="h-10 w-10 rounded-full"
-                      style={"background: #{sphere_grad}; box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.5);"}></div>
+                style={
+                  if @color == color,
+                    do:
+                      "background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.65); box-shadow: 0 4px 16px rgba(0,0,0,0.25);",
+                    else:
+                      "background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.32);"
+                }
+              >
+                <div
+                  class="h-10 w-10 rounded-full"
+                  style={"background: #{sphere_grad}; box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.5);"}
+                >
+                </div>
                 <span class="text-[10px] font-bold text-white/60">{nombre_color}</span>
                 <div :if={@color == color} class="h-1.5 w-1.5 rounded-full bg-white/80"></div>
                 <div :if={@color != color} class="h-1.5 w-1.5"></div>
@@ -177,25 +408,51 @@
           </div>
         </div>
 
-        <p :if={@error} id="inicio-error"
-            class="mt-4 flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold text-red-300"
-            style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35);">
-          <svg class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        <p
+          :if={@error}
+          id="inicio-error"
+          class="mt-4 flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold text-red-300"
+          style="background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.35);"
+        >
+          <svg
+            class="size-4 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+            />
           </svg>
           {@error}
         </p>
 
-        <button id="inicio-submit" type="submit" form="inicio-player-form"
+        <button
+          id="inicio-submit"
+          type="submit"
+          form="inicio-player-form"
           class="mt-6 flex w-full items-center justify-center gap-2.5 rounded-2xl px-6 py-3.5 text-[0.9rem] font-bold text-white transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.98]"
-          style="background: rgba(255,255,255,0.22); backdrop-filter: blur(12px); border: 1.5px solid rgba(255,255,255,0.38); box-shadow: 0 6px 24px rgba(0,0,0,0.3); font-family:'Syne',sans-serif;">
-          <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+          style="background: rgba(255,255,255,0.22); backdrop-filter: blur(12px); border: 1.5px solid rgba(255,255,255,0.38); box-shadow: 0 6px 24px rgba(0,0,0,0.3); font-family:'Syne',sans-serif;"
+        >
+          <svg
+            class="size-5"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
+            />
           </svg>
           {if @modo == :crear, do: "Crear sala", else: "Unirse al lobby"}
         </button>
       </div>
     </div>
-
   </section>
 </Layouts.app>

@@ -7,7 +7,8 @@ defmodule Ludo.GameServer do
   alias Ludo.Board
 
   @max_jugadores 4
-  @timeout_sala  :timer.minutes(60)
+  @timeout_sala :timer.minutes(60)
+  @tiempo_turno :timer.seconds(30)
 
   # API publica
 
@@ -16,22 +17,24 @@ defmodule Ludo.GameServer do
     GenServer.start_link(__MODULE__, opts, name: via(codigo), timeout: @timeout_sala)
   end
 
-  def get_estado(codigo),             do: GenServer.call(via(codigo), :get_estado)
-  def unirse(codigo, jugador),        do: GenServer.call(via(codigo), {:unirse, jugador})
-  def salir(codigo, jugador_id),      do: GenServer.cast(via(codigo), {:salir, jugador_id})
-  def iniciar(codigo, host_id),       do: GenServer.call(via(codigo), {:iniciar, host_id})
+  def get_estado(codigo), do: GenServer.call(via(codigo), :get_estado)
+  def unirse(codigo, jugador), do: GenServer.call(via(codigo), {:unirse, jugador})
+  def salir(codigo, jugador_id), do: GenServer.cast(via(codigo), {:salir, jugador_id})
+  def iniciar(codigo, host_id), do: GenServer.call(via(codigo), {:iniciar, host_id})
   def tirar_dado(codigo, jugador_id), do: GenServer.call(via(codigo), {:tirar_dado, jugador_id})
 
   def mover_ficha(codigo, jugador_id, ficha_id),
     do: GenServer.call(via(codigo), {:mover_ficha, jugador_id, ficha_id})
 
+  def rendirse(codigo, jugador_id), do: GenServer.call(via(codigo), {:rendirse, jugador_id})
 
   @impl true
   def init(opts) do
-    codigo  = Keyword.fetch!(opts, :codigo)
+    codigo = Keyword.fetch!(opts, :codigo)
     host_id = Keyword.fetch!(opts, :host_id)
-    Logger.info("GameServer iniciado para sala #{codigo}")
-    {:ok, %Estado{codigo: codigo, host_id: host_id}, @timeout_sala}
+    modo = Keyword.get(opts, :modo, :clasico)
+    Logger.info("GameServer iniciado para sala #{codigo} (modo: #{modo})")
+    {:ok, %Estado{codigo: codigo, host_id: host_id, modo: modo}, @timeout_sala}
   end
 
   @impl true
@@ -72,7 +75,8 @@ defmodule Ludo.GameServer do
 
       true ->
         tablero = Board.nuevo(estado.jugadores)
-        nuevo   = %{estado | fase: :jugando, tablero: tablero, dado: nil, turno_idx: 0}
+        nuevo = %{estado | fase: :jugando, tablero: tablero, dado: nil, turno_idx: 0}
+        programar_timeout_turno(nuevo)
         broadcast!(nuevo.codigo, {:partida_iniciada, nuevo})
         {:reply, {:ok, nuevo}, nuevo, @timeout_sala}
     end
@@ -94,9 +98,19 @@ defmodule Ludo.GameServer do
 
       true ->
         resultado = Enum.random(1..6)
-        color     = jugador_en_turno.color
-        movibles  = Reglas.fichas_movibles(estado.tablero, jugador_id, color, resultado)
-        nuevo     = %{estado | dado: resultado, fichas_movibles: movibles}
+        color = jugador_en_turno.color
+
+        movibles = Reglas.fichas_movibles(estado.tablero, jugador_id, color, resultado)
+
+        nuevo = %{estado | dado: resultado, fichas_movibles: movibles}
+
+        # Cancelar el timeout de turno (el jugador ya tiro)
+        case Process.get(:timeout_ref) do
+          nil -> :ok
+          ref -> Process.cancel_timer(ref)
+        end
+
+        Process.delete(:timeout_ref)
 
         broadcast!(nuevo.codigo, {:dado_tirado, resultado, jugador_id, nuevo})
 
@@ -125,14 +139,24 @@ defmodule Ludo.GameServer do
         {:reply, {:error, :ficha_no_puede_moverse}, estado, @timeout_sala}
 
       true ->
-        dado_usado   = estado.dado
-        fichas_prev  = Map.get(estado.tablero, jugador_id, [])
-        pos_anterior = fichas_prev |> Enum.find(&(&1.id == ficha_id)) |> case do
-          nil -> nil
-          f   -> f.pos
-        end
+        dado_usado = estado.dado
+        fichas_prev = Map.get(estado.tablero, jugador_id, [])
 
-        case Reglas.aplicar_movimiento(estado.tablero, jugador_id, ficha_id, dado_usado, estado.jugadores) do
+        pos_anterior =
+          fichas_prev
+          |> Enum.find(&(&1.id == ficha_id))
+          |> case do
+            nil -> nil
+            f -> f.pos
+          end
+
+        case Reglas.aplicar_movimiento(
+               estado.tablero,
+               jugador_id,
+               ficha_id,
+               dado_usado,
+               estado.jugadores
+             ) do
           {:error, _} = err ->
             {:reply, err, estado, @timeout_sala}
 
@@ -142,39 +166,82 @@ defmodule Ludo.GameServer do
               |> Estado.finalizar(eventos)
               |> Estado.avanzar_turno_si_no_seis(dado_usado, eventos)
 
-            broadcast!(nuevo.codigo,
-              {:ficha_movida, jugador_id, ficha_id, dado_usado, pos_anterior, nuevo, eventos})
+            programar_timeout_turno(nuevo)
+
+            broadcast!(
+              nuevo.codigo,
+              {:ficha_movida, jugador_id, ficha_id, dado_usado, pos_anterior, nuevo, eventos}
+            )
+
             {:reply, {:ok, nuevo}, nuevo, @timeout_sala}
         end
     end
   end
 
   @impl true
+  def handle_call({:rendirse, jugador_id}, _from, estado) do
+    cond do
+      estado.fase != :jugando ->
+        {:reply, {:error, :partida_no_activa}, estado, @timeout_sala}
+
+      true ->
+        # Cancelar timer de turno
+        case Process.get(:timeout_ref) do
+          nil -> :ok
+          ref -> Process.cancel_timer(ref)
+        end
+
+        Process.delete(:timeout_ref)
+
+        nuevo = %{
+          estado
+          | fase: :esperando,
+            tablero: %{},
+            dado: nil,
+            fichas_movibles: [],
+            turno_idx: 0
+        }
+
+        Logger.info("Sala #{estado.codigo}: jugador #{jugador_id} abandonó la partida")
+        broadcast!(nuevo.codigo, {:partida_rendida, nuevo})
+        {:reply, {:ok, nuevo}, nuevo, @timeout_sala}
+    end
+  end
+
+  @impl true
   def handle_cast({:salir, jugador_id}, estado) do
-    jugadores    = Enum.reject(estado.jugadores, &(&1.id == jugador_id))
-    nuevo_estado = %{estado | jugadores: jugadores}
+    nuevo_estado = ejecutar_salir(estado, jugador_id)
 
-    nuevo_estado =
-      if estado.host_id == jugador_id && length(jugadores) > 0 do
-        %{nuevo_estado | host_id: hd(jugadores).id}
-      else
-        nuevo_estado
-      end
-
-    broadcast!(nuevo_estado.codigo, {:jugador_salio, nuevo_estado})
-
-    if length(jugadores) == 0,
-      do:   {:stop, :normal, nuevo_estado},
+    if length(nuevo_estado.jugadores) == 0,
+      do: {:stop, :normal, nuevo_estado},
       else: {:noreply, nuevo_estado, @timeout_sala}
   end
 
   @impl true
   def handle_info({:auto_pasar_turno, dado_resultado}, estado) do
-    # Solo avanzar si el dado sigue activo 
     if estado.dado != nil do
       nuevo = Estado.avanzar_turno(estado, dado_resultado)
+      programar_timeout_turno(nuevo)
       broadcast!(nuevo.codigo, {:turno_pasado, nuevo})
       {:noreply, nuevo, @timeout_sala}
+    else
+      {:noreply, estado, @timeout_sala}
+    end
+  end
+
+  @impl true
+  def handle_info({:timeout_turno, jugador_id, turno_idx}, estado) do
+    Process.delete(:timeout_ref)
+
+    if estado.fase == :jugando && estado.dado == nil && estado.turno_idx == turno_idx do
+      jugador_en_turno = Enum.at(estado.jugadores, estado.turno_idx)
+
+      if jugador_en_turno && jugador_en_turno.id == jugador_id do
+        Logger.info("Timeout de turno para jugador #{jugador_id}")
+        {:noreply, ejecutar_salir(estado, jugador_id), @timeout_sala}
+      else
+        {:noreply, estado, @timeout_sala}
+      end
     else
       {:noreply, estado, @timeout_sala}
     end
@@ -192,6 +259,73 @@ defmodule Ludo.GameServer do
 
   defp broadcast!(codigo, msg),
     do: Phoenix.PubSub.broadcast(Ludo.PubSub, "sala:#{codigo}", msg)
+
+  defp ejecutar_salir(estado, jugador_id) do
+    jugadores = Enum.reject(estado.jugadores, &(&1.id == jugador_id))
+    idx_saliente = Enum.find_index(estado.jugadores, &(&1.id == jugador_id))
+
+    tablero =
+      if estado.fase == :jugando do
+        Map.delete(estado.tablero, jugador_id)
+      else
+        estado.tablero
+      end
+
+    nuevo_estado = %{estado | jugadores: jugadores, tablero: tablero}
+
+    nuevo_estado =
+      if estado.host_id == jugador_id && length(jugadores) > 0 do
+        %{nuevo_estado | host_id: hd(jugadores).id}
+      else
+        nuevo_estado
+      end
+
+    nuevo_estado =
+      if estado.fase == :jugando && idx_saliente do
+        if idx_saliente < estado.turno_idx do
+          %{nuevo_estado | turno_idx: estado.turno_idx - 1}
+        else
+          nuevo_estado
+        end
+      else
+        nuevo_estado
+      end
+
+    nuevo_estado =
+      if estado.fase == :jugando && length(jugadores) <= 1 do
+        %{nuevo_estado | fase: :finalizada, turno_idx: 0}
+      else
+        nuevo_estado
+      end
+
+    programar_timeout_turno(nuevo_estado)
+
+    broadcast!(nuevo_estado.codigo, {:jugador_salio, jugador_id, nuevo_estado})
+
+    nuevo_estado
+  end
+
+  defp programar_timeout_turno(estado) do
+    if estado.fase == :jugando && length(estado.jugadores) > 1 do
+      jugador = Enum.at(estado.jugadores, estado.turno_idx)
+
+      if jugador do
+        case Process.get(:timeout_ref) do
+          nil -> :ok
+          ref -> Process.cancel_timer(ref)
+        end
+
+        ref =
+          Process.send_after(
+            self(),
+            {:timeout_turno, jugador.id, estado.turno_idx},
+            @tiempo_turno
+          )
+
+        Process.put(:timeout_ref, ref)
+      end
+    end
+  end
 
   defp color_tomado?(jugadores, color),
     do: Enum.any?(jugadores, &(&1.color == color))

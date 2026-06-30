@@ -12,18 +12,18 @@ defmodule LudoWeb.LobbyLive do
         end
 
         {:ok,
-          assign(socket,
-            codigo: codigo,
-            jugador_id: jugador_id,
-            estado: estado,
-            color_hex: Ludo.Colores.mapa_hex()
-          )}
+         assign(socket,
+           codigo: codigo,
+           jugador_id: jugador_id,
+           estado: estado,
+           color_hex: Ludo.Colores.mapa_hex()
+         )}
 
       {:error, :sala_no_existe} ->
         {:ok,
-          socket
-          |> put_flash(:error, "La sala #{codigo} no existe.")
-          |> push_navigate(to: ~p"/")}
+         socket
+         |> put_flash(:error, "La sala #{codigo} no existe.")
+         |> push_navigate(to: ~p"/")}
     end
   end
 
@@ -59,8 +59,15 @@ defmodule LudoWeb.LobbyLive do
     {:noreply, assign(socket, estado: nuevo_estado)}
   end
 
-  def handle_info({:jugador_salio, nuevo_estado}, socket) do
-    {:noreply, assign(socket, estado: nuevo_estado)}
+  def handle_info({:jugador_salio, jugador_id_saliente, nuevo_estado}, socket) do
+    socket =
+      if socket.assigns.jugador_id == jugador_id_saliente do
+        push_navigate(socket, to: ~p"/")
+      else
+        assign(socket, estado: nuevo_estado)
+      end
+
+    {:noreply, socket}
   end
 
   def handle_info({:partida_iniciada, _estado}, socket) do
@@ -73,4 +80,40 @@ defmodule LudoWeb.LobbyLive do
 
   def puede_iniciar?(estado),
     do: length(estado.jugadores) >= 2 && estado.fase == :esperando
+
+  def render_jugador_card(jugador, host_id, color_hex) do
+    assigns = %{jugador: jugador, host_id: host_id, color_hex: color_hex}
+
+    ~H"""
+    <div
+      id={"lobby-jugador-#{@jugador.id}"}
+      class="rounded-2xl px-5 py-4 transition-all duration-200"
+      style="background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.35);"
+    >
+      <div class="flex items-center gap-4">
+        <span
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-extrabold text-white"
+          style={"background-color: #{Map.fetch!(@color_hex, @jugador.color)}; box-shadow: 0 4px 14px rgba(0,0,0,0.35);"}
+        >
+          {String.first(@jugador.nombre) |> String.upcase()}
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <p class="truncate text-base font-extrabold text-white">
+              {@jugador.nombre}
+            </p>
+            <.icon
+              :if={@jugador.id == @host_id}
+              name="hero-star-solid"
+              class="size-4 shrink-0 text-amber-400"
+            />
+          </div>
+          <p class="text-sm font-semibold capitalize text-white/45">
+            {Atom.to_string(@jugador.color)}
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
 end

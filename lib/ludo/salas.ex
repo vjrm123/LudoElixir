@@ -23,32 +23,32 @@ defmodule Ludo.Salas do
 
   # ─── API pública ──────────────────────────────────────────────────────────
 
+  # Crea una nueva sala y arrancar su GameServer
 
-  #Crea una nueva sala y arrancar su GameServer
-
-  def crear_sala(nombre_jugador, color) do
-    with :ok <- validar_color(color),
-          :ok <- validar_nombre(nombre_jugador),
-          codigo <- codigo_unico(),
-          host_id <- generar_id(),
-          jugador <- %{id: host_id, nombre: nombre_jugador, color: color},
-          {:ok, _pid} <- arrancar_game_server(codigo, host_id),
-          {:ok, estado} <- GameServer.unirse(codigo, jugador) do
+  def crear_sala(nombre_jugador, color, modo \\ :clasico) do
+    with :ok <- validar_modo(modo),
+         :ok <- validar_color(color),
+         :ok <- validar_nombre(nombre_jugador),
+         codigo <- codigo_unico(),
+         host_id <- generar_id(),
+         jugador <- %{id: host_id, nombre: nombre_jugador, color: color},
+         {:ok, _pid} <- arrancar_game_server(codigo, host_id, modo),
+         {:ok, estado} <- GameServer.unirse(codigo, jugador) do
       {:ok, %{codigo: codigo, host_id: host_id, estado: estado}}
     end
   end
 
-  #Une a un jugador a una sala existente
+  # Une a un jugador a una sala existente
 
   def unirse_sala(codigo, nombre_jugador, color) do
     codigo = normalizar_codigo(codigo)
 
-    with  :ok <- validar_color(color),
-          :ok <- validar_nombre(nombre_jugador),
-          :ok <- sala_existe_o_error(codigo),
-          jugador_id <- generar_id(),
-          jugador <- %{id: jugador_id, nombre: nombre_jugador, color: color},
-          {:ok, estado} <- GameServer.unirse(codigo, jugador) do
+    with :ok <- validar_color(color),
+         :ok <- validar_nombre(nombre_jugador),
+         :ok <- sala_existe_o_error(codigo),
+         jugador_id <- generar_id(),
+         jugador <- %{id: jugador_id, nombre: nombre_jugador, color: color},
+         {:ok, estado} <- GameServer.unirse(codigo, jugador) do
       {:ok, %{jugador_id: jugador_id, estado: estado}}
     end
   end
@@ -87,13 +87,16 @@ defmodule Ludo.Salas do
     end
   end
 
-  
   def suscribir(codigo) do
     codigo = normalizar_codigo(codigo)
     Phoenix.PubSub.subscribe(Ludo.PubSub, "sala:#{codigo}")
   end
 
   @colores_validos Ludo.Colores.lista()
+  @modos_validos [:clasico, :equipos]
+
+  defp validar_modo(modo) when modo in @modos_validos, do: :ok
+  defp validar_modo(_), do: {:error, :modo_invalido}
 
   defp validar_color(color) when color in @colores_validos, do: :ok
   defp validar_color(_), do: {:error, :color_invalido}
@@ -117,10 +120,10 @@ defmodule Ludo.Salas do
     if sala_existe?(codigo), do: :ok, else: {:error, :sala_no_existe}
   end
 
-  defp arrancar_game_server(codigo, host_id) do
+  defp arrancar_game_server(codigo, host_id, modo) do
     DynamicSupervisor.start_child(
       Ludo.SalaSupervisor,
-      {GameServer, codigo: codigo, host_id: host_id}
+      {GameServer, codigo: codigo, host_id: host_id, modo: modo}
     )
   end
 

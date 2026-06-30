@@ -4,12 +4,12 @@ defmodule LudoWeb.TableroLive do
   # Las celdas del camino ya estan definidas en Ludo.Board, no se repiten aqui.
   @path_cells MapSet.new(Ludo.Board.todas_las_coords())
   @home_slots %{
-    red:     [{1,1},{1,4},{4,1},{4,4}],
-    blue:    [{1,10},{1,13},{4,10},{4,13}],
-    emerald: [{10,1},{10,4},{13,1},{13,4}],
-    amber:   [{10,10},{10,13},{13,10},{13,13}]
+    red: [{1, 1}, {1, 4}, {4, 1}, {4, 4}],
+    blue: [{1, 10}, {1, 13}, {4, 10}, {4, 13}],
+    emerald: [{10, 1}, {10, 4}, {13, 1}, {13, 4}],
+    amber: [{10, 10}, {10, 13}, {13, 10}, {13, 13}]
   }
-  @start_cells %{red: {6,1}, blue: {1,8}, emerald: {13,6}, amber: {8,13}}
+  @start_cells %{red: {6, 1}, blue: {1, 8}, emerald: {13, 6}, amber: {8, 13}}
 
   # Mount
 
@@ -19,23 +19,25 @@ defmodule LudoWeb.TableroLive do
         if connected?(socket), do: Ludo.Salas.suscribir(codigo)
 
         {:ok,
-          socket
-          |> assign(codigo: codigo, jugador_id: nil)
-          |> sync_estado(estado)}
+         socket
+         |> assign(codigo: codigo, jugador_id: nil)
+         |> sync_estado(estado)}
 
       {:error, :sala_no_existe} ->
         {:ok,
-          socket
-          |> put_flash(:error, "La sala no existe.")
-          |> push_navigate(to: ~p"/")}
+         socket
+         |> put_flash(:error, "La sala no existe.")
+         |> push_navigate(to: ~p"/")}
     end
   end
 
   # Events
 
   def handle_event("restore_jugador", %{"jugador_id" => jid}, socket) do
-    en_sala? = socket.assigns.jugadores_lista
-                |> Enum.any?(&(&1.id == jid))
+    en_sala? =
+      socket.assigns.jugadores_lista
+      |> Enum.any?(&(&1.id == jid))
+
     {:noreply, if(en_sala?, do: assign(socket, jugador_id: jid), else: socket)}
   end
 
@@ -44,12 +46,21 @@ defmodule LudoWeb.TableroLive do
 
     case Ludo.GameServer.tirar_dado(codigo, jid) do
       {:ok, _resultado} -> {:noreply, socket}
-      {:error, _razon}  -> {:noreply, socket}
+      {:error, _razon} -> {:noreply, socket}
     end
   end
 
   def handle_event("minimizar_popup", _params, socket) do
     {:noreply, assign(socket, popup_minimizado: true)}
+  end
+
+  def handle_event("rendirse", _params, socket) do
+    %{codigo: codigo, jugador_id: jid} = socket.assigns
+
+    case Ludo.GameServer.rendirse(codigo, jid) do
+      {:ok, _nuevo} -> {:noreply, socket}
+      {:error, _razon} -> {:noreply, socket}
+    end
   end
 
   def handle_event("mover_ficha", %{"ficha" => ficha_id_str}, socket) do
@@ -58,7 +69,7 @@ defmodule LudoWeb.TableroLive do
 
     case Ludo.GameServer.mover_ficha(codigo, jid, ficha_id) do
       {:ok, _nuevo_estado} -> {:noreply, socket}
-      {:error, _razon}     -> {:noreply, socket}
+      {:error, _razon} -> {:noreply, socket}
     end
   end
 
@@ -69,25 +80,29 @@ defmodule LudoWeb.TableroLive do
       socket
       |> push_event("dado_tirado", %{jugador_id: jugador_id, valor: resultado})
       |> assign(popup_minimizado: false)
+
     {:noreply, sync_estado(socket, nuevo_estado)}
   end
 
-  def handle_info({:ficha_movida, jugador_id, ficha_id, dado_usado, pos_anterior, nuevo_estado, _eventos}, socket) do
+  def handle_info(
+        {:ficha_movida, jugador_id, ficha_id, dado_usado, pos_anterior, nuevo_estado, _eventos},
+        socket
+      ) do
     jugador = Enum.find(nuevo_estado.jugadores, &(&1.id == jugador_id))
 
     socket =
       if jugador && pos_anterior && dado_usado do
         color_es = jugador.color
         color_en = color_sala_to_tablero(color_es)
-        inicio   = pos_to_coords(pos_anterior, color_es, ficha_id - 1)
-        pasos    = Ludo.Reglas.pasos_de_movimiento(pos_anterior, color_es, dado_usado)
+        inicio = pos_to_coords(pos_anterior, color_es, ficha_id - 1)
+        pasos = Ludo.Reglas.pasos_de_movimiento(pos_anterior, color_es, dado_usado)
 
         push_event(socket, "animar_token", %{
-          token_id:    "#{jugador_id}-#{ficha_id}",
+          token_id: "#{jugador_id}-#{ficha_id}",
           color_class: player_color_class(color_en),
-          inicio:      Tuple.to_list(inicio),
-          pasos:       Enum.map(pasos, &Tuple.to_list/1),
-          intervalo:   300
+          inicio: Tuple.to_list(inicio),
+          pasos: Enum.map(pasos, &Tuple.to_list/1),
+          intervalo: 300
         })
       else
         socket
@@ -104,33 +119,56 @@ defmodule LudoWeb.TableroLive do
     {:noreply, sync_estado(socket, nuevo_estado)}
   end
 
-  def handle_info({:jugador_salio, _estado}, socket) do
-    {:noreply, push_navigate(socket, to: ~p"/")}
+  def handle_info({:jugador_salio, jugador_id_saliente, nuevo_estado}, socket) do
+    socket =
+      if socket.assigns.jugador_id == jugador_id_saliente do
+        push_navigate(socket, to: ~p"/")
+      else
+        sync_estado(socket, nuevo_estado)
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:partida_rendida, _nuevo_estado}, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/lobby/#{socket.assigns.codigo}")}
   end
 
   def handle_info(_, socket), do: {:noreply, socket}
 
-  #State sync
+  # State sync
 
   # Sincroniza el estado del servidor con los assigns de LiveView.
   # Cuando el dado vuelve a nil (tras mover ficha o pasar turno),
   # se resetea popup_minimizado para que el popup vuelva a aparecer en el siguiente turno.
   defp sync_estado(socket, estado) do
-    jugadores_lista  = estado.jugadores
-    color_map        = Map.new(jugadores_lista, &{&1.id, &1.color})
-    token_coords     = build_token_coords(estado.tablero, color_map)
+    jugadores_lista = estado.jugadores
+    color_map = Map.new(jugadores_lista, &{&1.id, &1.color})
+    token_coords = build_token_coords(estado.tablero, color_map)
     jugador_en_turno = Enum.at(jugadores_lista, estado.turno_idx)
 
+    ganador =
+      if estado.fase == :finalizada do
+        if estado.modo == :equipos && jugador_en_turno do
+          equipo = Ludo.Reglas.equipo_de_color(jugador_en_turno.color)
+          %{tipo: :equipo, equipo: equipo, jugador: jugador_en_turno}
+        else
+          %{tipo: :jugador, jugador: jugador_en_turno}
+        end
+      end
+
     assign(socket,
-      fase:             estado.fase,
-      jugadores_lista:  jugadores_lista,
-      turno_jugador:    jugador_en_turno,
-      dado:             estado.dado,
-      fichas_movibles:  estado.fichas_movibles,
-      tablero:          estado.tablero,
-      token_coords:     token_coords,
-      ganador:          if(estado.fase == :finalizada, do: jugador_en_turno, else: nil),
-      popup_minimizado: if(estado.dado == nil, do: false, else: Map.get(socket.assigns, :popup_minimizado, false))
+      modo: estado.modo,
+      fase: estado.fase,
+      jugadores_lista: jugadores_lista,
+      turno_jugador: jugador_en_turno,
+      dado: estado.dado,
+      fichas_movibles: estado.fichas_movibles,
+      tablero: estado.tablero,
+      token_coords: token_coords,
+      ganador: ganador,
+      popup_minimizado:
+        if(estado.dado == nil, do: false, else: Map.get(socket.assigns, :popup_minimizado, false))
     )
   end
 
@@ -141,13 +179,14 @@ defmodule LudoWeb.TableroLive do
 
       Enum.map(fichas, fn ficha ->
         coords = pos_to_coords(ficha.pos, color_es, ficha.id - 1)
+
         %{
           jugador_id: jugador_id,
-          ficha_id:   ficha.id,
-          color:      color_en,
-          coords:     coords,
-          en_casa:    ficha.pos == :casa,
-          en_meta:    ficha.pos == :meta
+          ficha_id: ficha.id,
+          color: color_en,
+          coords: coords,
+          en_casa: ficha.pos == :casa,
+          en_meta: ficha.pos == :meta
         }
       end)
     end)
@@ -187,7 +226,13 @@ defmodule LudoWeb.TableroLive do
         %{kind: :lane, color: lane_color}
 
       MapSet.member?(@path_cells, {row, col}) ->
-        %{kind: :path, color: start_color(row, col), safe: safe_cell?(row, col), row: row, col: col}
+        %{
+          kind: :path,
+          color: start_color(row, col),
+          safe: safe_cell?(row, col),
+          row: row,
+          col: col
+        }
 
       true ->
         %{kind: :blank}
@@ -216,21 +261,23 @@ defmodule LudoWeb.TableroLive do
     do: "aspect-square rounded-sm #{lane_gradient(color)}"
 
   def board_cell_class(%{kind: :path, color: nil} = cell),
-    do: "aspect-square bg-white/52 border border-white/52 #{path_corner_class(cell.row, cell.col)}"
+    do:
+      "aspect-square bg-white/52 border border-white/52 #{path_corner_class(cell.row, cell.col)}"
 
   def board_cell_class(%{kind: :path, color: color} = cell),
-    do: "aspect-square border border-white/30 #{start_cell_gradient(color)} #{path_corner_class(cell.row, cell.col)}"
+    do:
+      "aspect-square border border-white/30 #{start_cell_gradient(color)} #{path_corner_class(cell.row, cell.col)}"
 
   # Esquinas del camino — cada celda de esquina tiene el radio en la esquina correcta
-  defp path_corner_class(0,  6),  do: "rounded-tl-lg"
-  defp path_corner_class(0,  8),  do: "rounded-tr-lg"
-  defp path_corner_class(6,  0),  do: "rounded-tl-lg"
-  defp path_corner_class(8,  0),  do: "rounded-bl-lg"
-  defp path_corner_class(6,  14), do: "rounded-tr-lg"
-  defp path_corner_class(8,  14), do: "rounded-br-lg"
-  defp path_corner_class(14, 6),  do: "rounded-bl-lg"
-  defp path_corner_class(14, 8),  do: "rounded-br-lg"
-  defp path_corner_class(_,  _),  do: ""
+  defp path_corner_class(0, 6), do: "rounded-tl-lg"
+  defp path_corner_class(0, 8), do: "rounded-tr-lg"
+  defp path_corner_class(6, 0), do: "rounded-tl-lg"
+  defp path_corner_class(8, 0), do: "rounded-bl-lg"
+  defp path_corner_class(6, 14), do: "rounded-tr-lg"
+  defp path_corner_class(8, 14), do: "rounded-br-lg"
+  defp path_corner_class(14, 6), do: "rounded-bl-lg"
+  defp path_corner_class(14, 8), do: "rounded-br-lg"
+  defp path_corner_class(_, _), do: ""
 
   # Returns list of tokens on a given {row, col}
   def tokens_en_celda(token_coords, row, col) do
@@ -243,25 +290,28 @@ defmodule LudoWeb.TableroLive do
   end
 
   # CSS grid-area style for each home zone overlay
-  def home_zone_grid_style(:red),     do: "grid-column: 1 / 7; grid-row: 1 / 7;"
-  def home_zone_grid_style(:blue),    do: "grid-column: 10 / 16; grid-row: 1 / 7;"
+  def home_zone_grid_style(:red), do: "grid-column: 1 / 7; grid-row: 1 / 7;"
+  def home_zone_grid_style(:blue), do: "grid-column: 10 / 16; grid-row: 1 / 7;"
   def home_zone_grid_style(:emerald), do: "grid-column: 1 / 7; grid-row: 10 / 16;"
-  def home_zone_grid_style(:amber),   do: "grid-column: 10 / 16; grid-row: 10 / 16;"
+  def home_zone_grid_style(:amber), do: "grid-column: 10 / 16; grid-row: 10 / 16;"
 
   # Home zone bg CSS classes (app.css)
-  def home_zone_bg(:red),     do: "home-zone-red"
-  def home_zone_bg(:blue),    do: "home-zone-blue"
+  def home_zone_bg(:red), do: "home-zone-red"
+  def home_zone_bg(:blue), do: "home-zone-blue"
   def home_zone_bg(:emerald), do: "home-zone-emerald"
-  def home_zone_bg(:amber),   do: "home-zone-amber"
+  def home_zone_bg(:amber), do: "home-zone-amber"
 
   # Cuadrado interior — muy oscuro del mismo color, contraste para piezas brillantes
   @inner_base "border-radius: 18%; padding: 5%; gap: 4%; box-shadow: inset 0 3px 16px rgba(0,0,0,0.55);"
   def home_inner_style(:red),
     do: @inner_base <> " background: rgba(80,0,0,0.75); border: 2px solid rgba(239,68,68,0.60);"
+
   def home_inner_style(:blue),
     do: @inner_base <> " background: rgba(0,10,75,0.75); border: 2px solid rgba(59,130,246,0.60);"
+
   def home_inner_style(:emerald),
     do: @inner_base <> " background: rgba(0,40,18,0.75); border: 2px solid rgba(16,185,129,0.60);"
+
   def home_inner_style(:amber),
     do: @inner_base <> " background: rgba(70,35,0,0.75); border: 2px solid rgba(245,158,11,0.60);"
 
@@ -278,34 +328,34 @@ defmodule LudoWeb.TableroLive do
       ficha_id in fichas_movibles
   end
 
-  def player_color_class(nil),      do: "bg-[#c8f07a]"
-  def player_color_class(:red),     do: "bg-red-500"
-  def player_color_class(:blue),    do: "bg-blue-500"
+  def player_color_class(nil), do: "bg-[#c8f07a]"
+  def player_color_class(:red), do: "bg-red-500"
+  def player_color_class(:blue), do: "bg-blue-500"
   def player_color_class(:emerald), do: "bg-emerald-500"
-  def player_color_class(:amber),   do: "bg-amber-500"
+  def player_color_class(:amber), do: "bg-amber-500"
 
-  def color_name(:red),     do: "Rojo"
-  def color_name(:blue),    do: "Azul"
+  def color_name(:red), do: "Rojo"
+  def color_name(:blue), do: "Azul"
   def color_name(:emerald), do: "Verde"
-  def color_name(:amber),   do: "Amarillo"
-  def color_name(nil),      do: "-"
+  def color_name(:amber), do: "Amarillo"
+  def color_name(nil), do: "-"
 
-  def color_hex(:red),     do: "#dc2626"
-  def color_hex(:blue),    do: "#2563eb"
+  def color_hex(:red), do: "#dc2626"
+  def color_hex(:blue), do: "#2563eb"
   def color_hex(:emerald), do: "#059669"
-  def color_hex(:amber),   do: "#d97706"
-  def color_hex(_),        do: "#6366f1"
+  def color_hex(:amber), do: "#d97706"
+  def color_hex(_), do: "#6366f1"
 
   def color_sala_nombre(c), do: color_name(color_sala_to_tablero(c))
 
   # Mismos valores que color_hex, solo traduce el color de sala al color del tablero.
   def color_sala_hex(c), do: color_hex(color_sala_to_tablero(c))
 
-  def color_sala_to_tablero(:rojo),     do: :red
-  def color_sala_to_tablero(:azul),     do: :blue
-  def color_sala_to_tablero(:verde),    do: :emerald
+  def color_sala_to_tablero(:rojo), do: :red
+  def color_sala_to_tablero(:azul), do: :blue
+  def color_sala_to_tablero(:verde), do: :emerald
   def color_sala_to_tablero(:amarillo), do: :amber
-  def color_sala_to_tablero(c),         do: c
+  def color_sala_to_tablero(c), do: c
 
   # Board geometry helpers 
 
@@ -324,15 +374,15 @@ defmodule LudoWeb.TableroLive do
 
   defp center_cell?(row, col), do: row in 6..8 and col in 6..8
 
-  defp home_lane_color(7, col) when col in 1..5,  do: :red
-  defp home_lane_color(row, 7) when row in 1..5,  do: :blue
+  defp home_lane_color(7, col) when col in 1..5, do: :red
+  defp home_lane_color(row, 7) when row in 1..5, do: :blue
   defp home_lane_color(row, 7) when row in 9..13, do: :emerald
   defp home_lane_color(7, col) when col in 9..13, do: :amber
   defp home_lane_color(_row, _col), do: nil
 
-  defp base_color(row, col) when row in 0..5 and col in 0..5,   do: :red
-  defp base_color(row, col) when row in 0..5 and col in 9..14,  do: :blue
-  defp base_color(row, col) when row in 9..14 and col in 0..5,  do: :emerald
+  defp base_color(row, col) when row in 0..5 and col in 0..5, do: :red
+  defp base_color(row, col) when row in 0..5 and col in 9..14, do: :blue
+  defp base_color(row, col) when row in 9..14 and col in 0..5, do: :emerald
   defp base_color(row, col) when row in 9..14 and col in 9..14, do: :amber
   defp base_color(_row, _col), do: nil
 
@@ -343,11 +393,15 @@ defmodule LudoWeb.TableroLive do
   defp center_cell_info(8, 7), do: %{kind: :center_tri, color: :emerald}
   defp center_cell_info(_, _), do: %{kind: :center_corner}
 
-  defp safe_cell?(6, 1),  do: true
-  defp safe_cell?(1, 8),  do: true
+  defp safe_cell?(6, 1), do: true
+  defp safe_cell?(2, 6), do: true
+  defp safe_cell?(1, 8), do: true
+  defp safe_cell?(6, 12), do: true
   defp safe_cell?(13, 6), do: true
+  defp safe_cell?(12, 8), do: true
   defp safe_cell?(8, 13), do: true
-  defp safe_cell?(_, _),  do: false
+  defp safe_cell?(8, 2), do: true
+  defp safe_cell?(_, _), do: false
 
   defp start_color(row, col) do
     Enum.find_value(@start_cells, fn {color, coord} ->
@@ -355,19 +409,18 @@ defmodule LudoWeb.TableroLive do
     end)
   end
 
-
-  defp center_tri_bg(:red),     do: "bg-red-500/70"
-  defp center_tri_bg(:blue),    do: "bg-blue-500/70"
+  defp center_tri_bg(:red), do: "bg-red-500/70"
+  defp center_tri_bg(:blue), do: "bg-blue-500/70"
   defp center_tri_bg(:emerald), do: "bg-emerald-500/70"
-  defp center_tri_bg(:amber),   do: "bg-amber-500/70"
+  defp center_tri_bg(:amber), do: "bg-amber-500/70"
 
-  defp lane_gradient(:red),     do: "bg-red-500/80"
-  defp lane_gradient(:blue),    do: "bg-blue-500/80"
+  defp lane_gradient(:red), do: "bg-red-500/80"
+  defp lane_gradient(:blue), do: "bg-blue-500/80"
   defp lane_gradient(:emerald), do: "bg-emerald-500/80"
-  defp lane_gradient(:amber),   do: "bg-amber-500/80"
+  defp lane_gradient(:amber), do: "bg-amber-500/80"
 
-  defp start_cell_gradient(:red),     do: "bg-red-400/70"
-  defp start_cell_gradient(:blue),    do: "bg-blue-400/70"
+  defp start_cell_gradient(:red), do: "bg-red-400/70"
+  defp start_cell_gradient(:blue), do: "bg-blue-400/70"
   defp start_cell_gradient(:emerald), do: "bg-emerald-400/70"
-  defp start_cell_gradient(:amber),   do: "bg-amber-300/70"
+  defp start_cell_gradient(:amber), do: "bg-amber-300/70"
 end
