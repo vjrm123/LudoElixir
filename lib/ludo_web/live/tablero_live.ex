@@ -50,6 +50,16 @@ defmodule LudoWeb.TableroLive do
     end
   end
 
+  def handle_event("tirar_dado_fijo", %{"valor" => valor}, socket) do
+    %{codigo: codigo, jugador_id: jid} = socket.assigns
+    valor_int = String.to_integer(valor)
+
+    case Ludo.GameServer.tirar_dado_fijo(codigo, jid, valor_int) do
+      {:ok, _resultado} -> {:noreply, socket}
+      {:error, _razon} -> {:noreply, socket}
+    end
+  end
+
   def handle_event("minimizar_popup", _params, socket) do
     {:noreply, assign(socket, popup_minimizado: true)}
   end
@@ -107,6 +117,19 @@ defmodule LudoWeb.TableroLive do
       else
         socket
       end
+
+    {:noreply, sync_estado(socket, nuevo_estado)}
+  end
+
+  def handle_info({:tres_seises, jugador_id, resultado, nuevo_estado}, socket) do
+    jugador = Enum.find(nuevo_estado.jugadores, &(&1.id == jugador_id))
+    nombre = if jugador, do: jugador.nombre, else: "El jugador"
+
+    socket =
+      socket
+      |> push_event("dado_tirado", %{jugador_id: jugador_id, valor: resultado})
+      |> assign(popup_minimizado: false)
+      |> put_flash(:info, "#{nombre} sacó tres 6 seguidos y pierde el turno.")
 
     {:noreply, sync_estado(socket, nuevo_estado)}
   end

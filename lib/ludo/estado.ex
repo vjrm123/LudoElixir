@@ -13,18 +13,34 @@ defmodule Ludo.Estado do
     # jugador_id => [%{id, pos}]
     tablero: %{},
     # ids de fichas que pueden moverse este turno
-    fichas_movibles: []
+    fichas_movibles: [],
+    # cuantos 6 seguidos lleva el jugador en turno (a los 3 pierde el turno)
+    seis_seguidos: 0
   ]
 
   # Avanza al siguiente jugador o repite turno si saco 6
   def avanzar_turno(%__MODULE__{} = estado, dado) do
-    n = length(estado.jugadores)
-
     if dado == 6 && estado.fase == :jugando do
+      # Repite turno; conserva el contador de seises para detectar el tercero
       %{estado | dado: nil, fichas_movibles: []}
     else
-      %{estado | dado: nil, fichas_movibles: [], turno_idx: rem(estado.turno_idx + 1, n)}
+      pasar_turno(estado)
     end
+  end
+
+  # Pasa el turno al siguiente jugador incondicionalmente y reinicia el
+  # contador de seises. Se usa al avanzar normalmente y cuando un jugador
+  # pierde el turno por sacar tres 6 seguidos.
+  def pasar_turno(%__MODULE__{} = estado) do
+    n = length(estado.jugadores)
+
+    %{
+      estado
+      | dado: nil,
+        fichas_movibles: [],
+        seis_seguidos: 0,
+        turno_idx: rem(estado.turno_idx + 1, n)
+    }
   end
 
   # Avanza el turno solo si el dado no fue 6 o si alguien ya gano

@@ -239,13 +239,28 @@
                     </div>
                   <% else %>
                     <%= if mi_turno do %>
-                      <button
-                        phx-click="tirar_dado"
-                        class="btn-glow-pulse rounded-lg border border-black/20 bg-white/50 font-black uppercase hover:bg-white/70 hover:scale-105 active:scale-95 transition-all"
-                        style="--btn-glow:rgba(0,0,0,0.15); color:#111; padding:clamp(3px,0.8vmin,6px) clamp(5px,1.4vmin,10px); font-size:clamp(0.28rem,1.1vmin,0.48rem); letter-spacing:0.06em; white-space:nowrap;"
-                      >
-                        TIRAR DADO
-                      </button>
+                      <div class="flex flex-col items-center gap-1">
+                        <button
+                          phx-click="tirar_dado"
+                          class="btn-glow-pulse rounded-lg border border-black/20 bg-white/50 font-black uppercase hover:bg-white/70 hover:scale-105 active:scale-95 transition-all"
+                          style="--btn-glow:rgba(0,0,0,0.15); color:#111; padding:clamp(3px,0.8vmin,6px) clamp(5px,1.4vmin,10px); font-size:clamp(0.28rem,1.1vmin,0.48rem); letter-spacing:0.06em; white-space:nowrap;"
+                        >
+                          TIRAR DADO
+                        </button>
+                        <div class="flex gap-1">
+                          <%= for n <- 1..6 do %>
+                            <button
+                              phx-click="tirar_dado_fijo"
+                              phx-value-valor={n}
+                              class="btn-glow-pulse flex h-[clamp(14px,3.2vmin,24px)] w-[clamp(14px,3.2vmin,24px)] items-center justify-center rounded-md border border-amber-400/40 bg-amber-400/20 font-black text-amber-200 transition-all hover:bg-amber-400/40 hover:scale-110 active:scale-90"
+                              style="font-size:clamp(0.35rem,1.4vmin,0.65rem);"
+                              title={"Forzar dado #{n}"}
+                            >
+                              {n}
+                            </button>
+                          <% end %>
+                        </div>
+                      </div>
                     <% else %>
                       <p style="color:#444; font-size:clamp(0.28rem,1vmin,0.44rem); font-weight:600;">
                         Tirando...

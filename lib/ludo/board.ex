@@ -78,9 +78,7 @@ defmodule Ludo.Board do
   def home_entry(color), do: @home_entry[color]
   def celda_segura?(n), do: MapSet.member?(@safe_cells, n)
 
-  # Todas las coordenadas del camino principal, sin orden particular.
-  # Usado por la UI para saber que celdas son parte del camino sin
-  # tener que repetir la lista a mano.
+  # todas las coordenadas del camino principal, sin orden particular
   def todas_las_coords, do: Map.values(@cell_coords)
 
   # Casillas de salida por color

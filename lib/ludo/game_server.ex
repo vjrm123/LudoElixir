@@ -23,6 +23,9 @@ defmodule Ludo.GameServer do
   def iniciar(codigo, host_id), do: GenServer.call(via(codigo), {:iniciar, host_id})
   def tirar_dado(codigo, jugador_id), do: GenServer.call(via(codigo), {:tirar_dado, jugador_id})
 
+  def tirar_dado_fijo(codigo, jugador_id, valor),
+    do: GenServer.call(via(codigo), {:tirar_dado_fijo, jugador_id, valor})
+
   def mover_ficha(codigo, jugador_id, ficha_id),
     do: GenServer.call(via(codigo), {:mover_ficha, jugador_id, ficha_id})
 
@@ -97,27 +100,29 @@ defmodule Ludo.GameServer do
         {:reply, {:error, :ya_tiraste}, estado, @timeout_sala}
 
       true ->
-        resultado = Enum.random(1..6)
-        color = jugador_en_turno.color
+        procesar_tirada(estado, jugador_id, jugador_en_turno, Enum.random(1..6))
+    end
+  end
 
-        movibles = Reglas.fichas_movibles(estado.tablero, jugador_id, color, resultado)
+  @impl true
+  def handle_call({:tirar_dado_fijo, jugador_id, valor}, _from, estado) do
+    jugador_en_turno = Enum.at(estado.jugadores, estado.turno_idx)
 
-        nuevo = %{estado | dado: resultado, fichas_movibles: movibles}
+    cond do
+      estado.fase != :jugando ->
+        {:reply, {:error, :partida_no_activa}, estado, @timeout_sala}
 
-        # Cancelar el timeout de turno (el jugador ya tiro)
-        case Process.get(:timeout_ref) do
-          nil -> :ok
-          ref -> Process.cancel_timer(ref)
-        end
+      jugador_en_turno.id != jugador_id ->
+        {:reply, {:error, :no_es_tu_turno}, estado, @timeout_sala}
 
-        Process.delete(:timeout_ref)
+      estado.dado != nil ->
+        {:reply, {:error, :ya_tiraste}, estado, @timeout_sala}
 
-        broadcast!(nuevo.codigo, {:dado_tirado, resultado, jugador_id, nuevo})
+      valor not in 1..6 ->
+        {:reply, {:error, :valor_invalido}, estado, @timeout_sala}
 
-        # Si no hay movimientos posibles, pasar turno automaticamente tras 2 segundos
-        if movibles == [], do: Process.send_after(self(), {:auto_pasar_turno, resultado}, 2000)
-
-        {:reply, {:ok, resultado}, nuevo, @timeout_sala}
+      true ->
+        procesar_tirada(estado, jugador_id, jugador_en_turno, valor)
     end
   end
 
@@ -186,12 +191,7 @@ defmodule Ludo.GameServer do
 
       true ->
         # Cancelar timer de turno
-        case Process.get(:timeout_ref) do
-          nil -> :ok
-          ref -> Process.cancel_timer(ref)
-        end
-
-        Process.delete(:timeout_ref)
+        cancelar_timeout_turno()
 
         nuevo = %{
           estado
@@ -230,6 +230,20 @@ defmodule Ludo.GameServer do
   end
 
   @impl true
+  def handle_info({:forzar_pasar_turno, turno_idx}, estado) do
+    # Cambio de turno forzado tras tres 6 seguidos. Solo aplica si el estado
+    # no cambio mientras corria el temporizador (mismo turno y dado sin usar).
+    if estado.fase == :jugando && estado.turno_idx == turno_idx && estado.dado != nil do
+      nuevo = Estado.pasar_turno(estado)
+      programar_timeout_turno(nuevo)
+      broadcast!(nuevo.codigo, {:turno_pasado, nuevo})
+      {:noreply, nuevo, @timeout_sala}
+    else
+      {:noreply, estado, @timeout_sala}
+    end
+  end
+
+  @impl true
   def handle_info({:timeout_turno, jugador_id, turno_idx}, estado) do
     Process.delete(:timeout_ref)
 
@@ -254,6 +268,43 @@ defmodule Ludo.GameServer do
   end
 
   #  Helpers privados
+
+  # Procesa una tirada (aleatoria o forzada) ya validada: actualiza el contador
+  # de seises consecutivos y, si es el tercero, hace perder el turno al jugador.
+  defp procesar_tirada(estado, jugador_id, jugador_en_turno, valor) do
+    cancelar_timeout_turno()
+
+    seis_seguidos = if valor == 6, do: estado.seis_seguidos + 1, else: 0
+
+    if seis_seguidos >= 3 do
+      # Tercer 6 seguido: el jugador pierde el turno y no puede mover.
+      # Se muestra el dado (animacion) y se fuerza el cambio de turno tras 2s.
+      nuevo = %{estado | dado: valor, fichas_movibles: [], seis_seguidos: seis_seguidos}
+      broadcast!(nuevo.codigo, {:tres_seises, jugador_id, valor, nuevo})
+      Process.send_after(self(), {:forzar_pasar_turno, nuevo.turno_idx}, 2000)
+      {:reply, {:ok, valor}, nuevo, @timeout_sala}
+    else
+      movibles =
+        Reglas.fichas_movibles(estado.tablero, jugador_id, jugador_en_turno.color, valor)
+
+      nuevo = %{estado | dado: valor, fichas_movibles: movibles, seis_seguidos: seis_seguidos}
+      broadcast!(nuevo.codigo, {:dado_tirado, valor, jugador_id, nuevo})
+
+      # Si no hay movimientos posibles, pasar turno automaticamente tras 2 segundos
+      if movibles == [], do: Process.send_after(self(), {:auto_pasar_turno, valor}, 2000)
+
+      {:reply, {:ok, valor}, nuevo, @timeout_sala}
+    end
+  end
+
+  defp cancelar_timeout_turno do
+    case Process.get(:timeout_ref) do
+      nil -> :ok
+      ref -> Process.cancel_timer(ref)
+    end
+
+    Process.delete(:timeout_ref)
+  end
 
   defp via(codigo), do: {:via, Registry, {Ludo.SalaRegistry, codigo}}
 
@@ -310,10 +361,7 @@ defmodule Ludo.GameServer do
       jugador = Enum.at(estado.jugadores, estado.turno_idx)
 
       if jugador do
-        case Process.get(:timeout_ref) do
-          nil -> :ok
-          ref -> Process.cancel_timer(ref)
-        end
+        cancelar_timeout_turno()
 
         ref =
           Process.send_after(
